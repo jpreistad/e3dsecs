@@ -92,21 +92,22 @@ def compare_input_jperp(datadict, jjj2, inside, savesuff, secs_grid, alts_grid,
                                  datadict['lon'].reshape(datadict['shape']), 
                                  datadict['alt'].reshape(datadict['shape']), 
                                  ppp1, dim = dim, sliceindex = sliceindex, maph=maph, 
-                                 parameter=txt + ' from GEMINI', clim=clim)             
+                                 parameter=txt + ' from GEMINI', clim=clim, dipole_lompe=geomag)             
         #vi-ve part in middle
         ax = fig.add_subplot(132, projection='3d')
         visualization.plot_slice(ax, secs_grid, alts_grid, datadict['lat'].reshape(datadict['shape']), 
                                  datadict['lon'].reshape(datadict['shape']), 
                                  datadict['alt'].reshape(datadict['shape']), 
                                  ppp2, dim = dim, sliceindex = sliceindex, maph=maph, 
-                                 parameter=txt + ' estimated with '+savesuff[1:-1], clim=clim)            
+                                 parameter=txt + ' estimated with '+savesuff[1:-1], 
+                                 clim=clim, dipole_lompe=geomag)            
         #difference in right panel
         ax = fig.add_subplot(133, projection='3d')
         visualization.plot_slice(ax, secs_grid, alts_grid, datadict['lat'].reshape(datadict['shape']), 
                                  datadict['lon'].reshape(datadict['shape']), 
                                  datadict['alt'].reshape(datadict['shape']), 
                                  ppp1-ppp2, dim = dim, sliceindex = sliceindex, maph=maph,
-                                 parameter='GEMINI - estimate', clim=clim)
+                                 parameter='GEMINI - estimate', clim=clim, dipole_lompe=geomag)
         #Colorbar
         cbarax = plt.axes((0.37,0.2,0.3,0.02))
         # cbarax = plt.subplot2grid((1,3), (0, 1), rowspan = 1, colspan = 1)
@@ -751,7 +752,7 @@ def scatterplot_reconstruction(grid, alts_grid, datadict, lon, lat, alt, full_j,
 # plt.hist(np.degrees(np.arccos(vdotb/(bmags*vmappedmag))))
 # plt.hist(np.degrees(np.arccos(vdotb0/(bmags*vmappedmag))))    
 
-def scatterplot_lompe(ax, lmodel, datadict):
+def scatterplot_lompe(ax, lmodel, datadict, xgdat):
     '''
     Functionto produce plot of how the lompe fit reproduces the F-region ion drift
     velocities perp to B in GEMINI
@@ -765,56 +766,56 @@ def scatterplot_lompe(ax, lmodel, datadict):
     datadict : dict
         Containing the GEMINI data sampled at the same altitude as the lompe model
         is represented at.
+    xgdat : tuple
+        First element is the GEMINI grid object, second is the GEMINI data object        
 
     Returns
     -------
     axis object
 
     '''
-    dipole_lompe = True
-    
-    N = datadict['lat'].size
-    if dipole_lompe:
-        phi, theta = geog2geomag(datadict['mappedglon'], datadict['mappedglat']) # degrees input, radians out 
-        Bn_gm, Bu_gm = secs3d.gemini_tools.dipole_B(theta, height = datadict['maph'])
-        Be_gm = np.zeros(N)
-        B_gm = np.array([Be_gm, Bn_gm, Bu_gm])
-        Ee_gm, En_gm = lmodel.E(lon=np.degrees(phi), lat=90-np.degrees(theta))
-        Eu_gm = (-Ee_gm*Be_gm - En_gm*Bn_gm)/Bu_gm # from E dot B = 0
-        E_gm = np.array([Ee_gm, En_gm, Eu_gm])
-        Bmag = np.sqrt(Be_gm**2 + Bn_gm**2 + Bu_gm**2)
-        vperp_gm = np.cross(E_gm, B_gm, axisa=0, axisb=0) / (Bmag**2)[:,np.newaxis]
-        enugg_vec = secs3d.gemini_tools.enugm2enugg(vperp_gm, datadict['mappedglon'], datadict['mappedglat'])
 
-    else:
-        print('Not implemented')
-        print(1/0)
-       
-    ax.scatter(datadict['vperpmappede'], enugg_vec[:,0], label='$v_\perp$ east')
-    ax.scatter(datadict['vperpmappedn'], enugg_vec[:,1], label='$v_\perp$ north')
-    ax.scatter(datadict['vperpmappedu'], enugg_vec[:,2], label='$v_\perp$ up')
+    enugg_vec = gemini_tools.get_E_from_lmodel(lmodel, datadict, xgdat, returnvperp=True).T
+    
+    residuals_e = np.linalg.norm(datadict['vperpmappede'] - enugg_vec[:,0])
+    residuals_n = np.linalg.norm(datadict['vperpmappedn'] - enugg_vec[:,1])
+    residuals_u = np.linalg.norm(datadict['vperpmappedu'] - enugg_vec[:,2])
+    resmag = np.sqrt(residuals_e**2+residuals_n**2+residuals_u**2)
+
+           
+    ax.scatter(datadict['vperpmappede'], enugg_vec[:,0], label='$v_\perp$ east', alpha=0.1)
+    ax.scatter(datadict['vperpmappedn'], enugg_vec[:,1], label='$v_\perp$ north', alpha=0.1)
+    ax.scatter(datadict['vperpmappedu'], enugg_vec[:,2], label='$v_\perp$ up', alpha=0.1)
     ax.legend(frameon=False)
-    ax.set_xlabel('GEMINI [m/s]')
-    ax.set_ylabel('Lompe fit [m/s]')
+    # ax.set_xlabel('True value, no noise [m/s]')
+    # ax.set_ylabel('Estimate from noisy data [m/s]')
     minx = np.min(np.hstack((datadict['vperpe'],datadict['vperpn'])))
     maxx = np.max(np.hstack((datadict['vperpe'],datadict['vperpn'])))
     miny = np.min(np.hstack((enugg_vec[:,0],enugg_vec[:,1])))
     maxy = np.max(np.hstack((enugg_vec[:,0],enugg_vec[:,1])))
+    # minx = -1900
+    # maxx = 550
+    # miny = -1900
+    # maxy = 450
     xx = np.linspace(np.min((minx,miny)), np.max((maxx, maxy)),10)
     # yy = np.linspace(miny,maxy,10)
     ax.plot(xx,xx, color='black')
+    
+    # Residuals:
+    ax.text(-1800,-150, 'Residual norm: %i' % resmag)
+
     
     # extent = np.max(np.abs(np.hstack((ax.get_xlim(), ax.get_ylim()))))
     ax.set_aspect('equal')
     
     # ax.plot([-extent, extent], [-extent, extent], 'k-', zorder = 7)
-    # ax.set_xlim(-extent, extent)
-    # ax.set_ylim(-extent, extent)
+    # ax.set_xlim(minx, maxx)
+    # ax.set_ylim(miny, maxy)
     
     ax.plot([0, 0], [0.5*miny, 0.5*maxy], linestyle = '--', color = 'black', zorder = 7)
-    ax.text(50, -800, 'Lompe [m/s]', rotation=90)
+    ax.text(50, -1450, 'Estimate from noisy data [m/s]', rotation=90)
     ax.plot([0.5*minx, 0.5*maxx], [0, 0], linestyle = '--', color = 'black', zorder = 7)
-    ax.text(-900, 100, 'GEMINI [m/s]')
+    ax.text(-1200, 100, 'True value, no noise [m/s]')
     
     scale = 1000
     xloc = minx+125

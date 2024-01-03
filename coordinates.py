@@ -11,12 +11,15 @@ estimating 3D current densities, but not directly linked to the GEMINI grid.
 
 """
 
-from gemini3d.grid.convert import unitvecs_geographic
+# from gemini3d.grid.convert import unitvecs_geographic
 import numpy as np
-from gemini3d.grid.gridmodeldata import model2geogcoords, model2pointsgeogcoords, geog2dipole
-from gemini3d.grid.convert import geomag2geog, geog2geomag
+# from gemini3d.grid.gridmodeldata import model2geogcoords, model2pointsgeogcoords, geog2dipole
+from gemini3d.grid.convert import geog2geomag
 import gemini3d.grid.convert as convert
-import gemini_tools
+try:
+    from . import gemini_tools
+except:
+    import gemini_tools
 
 RE = gemini_tools.RE
 
@@ -260,3 +263,128 @@ def unitvec_xyz(lon, lat):
     ep[:,2]=np.zeros(_theta.shape)    
     
     return (er, et, ep)
+
+
+def rotvec_gg2gm(e):
+    egg=convert.Rgg2gm()@e.T   
+    return egg.T
+
+
+def unitvecs_geographic_general(glon, glat, dipole=True):
+    '''
+    Return a set of unit vectors in the geographic directions; components in 
+    cartesian ECEF. Code copied from pygemini convert.py. Note that if input arguments
+    are not geographic, e.g. geomagnetic, and dipole=False, then this function will
+    return the ECEF components of the ENU directions with refernce to that (geomagnetic)
+    coordinate system.
+    
+    Parameters
+    ----------
+    glon : array-like
+        geographic longitude in degrees.
+    glat : array-like
+        grographic latitude in degrees.
+    dipole : boolean
+        specifies whether the cartesian ECEF components should be in geographic
+        or geomagnetic (dipole) frame. If false, z is aligned with earths rotation.
+        If True (default) z is along dipole axis. This is the typical use with GEMINI.
+
+    Returns
+    -------
+    egalt : array-like
+        cartesian ECEF components of local radial direction.
+    eglon : array-like
+        cartesian ECEF components of local geo east direction.
+    eglat : array-like
+        cartesian ECEF components of local geo north direction.
+
+    '''
+    thetagg=np.pi/2-glat.flatten()*np.pi/180
+    phigg=glon.flatten()*np.pi/180
+    lx = glon.size
+    ergg=np.empty((lx,3))
+    ethetagg=np.empty((lx,3))
+    ephigg=np.empty((lx,3))
+    
+    # unit vectors in ECEF Cartesian geographic
+    ergg[:,0]=np.sin(thetagg)*np.cos(phigg)
+    ergg[:,1]=np.sin(thetagg)*np.sin(phigg)
+    ergg[:,2]=np.cos(thetagg)
+    ethetagg[:,0]=np.cos(thetagg)*np.cos(phigg)
+    ethetagg[:,1]=np.cos(thetagg)*np.sin(phigg)
+    ethetagg[:,2]=-np.sin(thetagg)
+    ephigg[:,0]=-np.sin(phigg)
+    ephigg[:,1]=np.cos(phigg)
+    ephigg[:,2]=np.zeros(thetagg.shape)
+    
+    if dipole:
+        # rotate into geomagnetic components (as used in grid dictionary)
+        egalt=rotvec_gg2gm(ergg)
+        eglon=rotvec_gg2gm(ephigg)
+        eglat=-1*rotvec_gg2gm(ethetagg)
+    else:
+        egalt = ergg
+        eglon = ephigg
+        eglat = -ethetagg
+    
+    return eglon,eglat,egalt
+
+
+def enu2gemini_rot(lon, lat, geographic = True):
+    '''
+    Make 3x3 matrix G such that G.dot(v_enu), where v_enu is a 3 element enu vector
+    gives the 3 element vector in GEMINI basis (x1,x2,x3) where x1 is the field
+    aligend direction, and x2 and x3 span the perp plane.
+    
+    Input must be in degrees.
+    
+    Parameters
+    -----------
+    lat : 1D array
+        Latitudes in degrees
+    lon : 1D array
+        Longitudes in degrees
+    geographic : boolean
+        Specifies if input latitudes are in geographic coordinates. If not, they
+        must be in centered dipole coords. In both cases, the returned matrix will
+        take a vector of ENU components into GEMINI components. Actually not sure
+        if this is a redundant feature.
+        
+    Return
+    ---------
+    3x3xN array containing the N rotation matrices
+    
+    '''
+    if geographic:
+        egmlon, egmlat, egmalt = unitvecs_geographic_general(lon, lat)
+        phi, theta = geog2geomag(lon, lat) # degrees input, radians out
+
+    else:
+        phi = np.radians(lon)
+        theta = np.pi/2 - np.radians(lat)
+        egmlon, egmlat, egmalt = unitvecs_geographic_general(lon, lat, dipole=False)
+
+    # Get cartesian geomagnetic components of local (e1, e2, e3) unit vector
+    # at (glat, glon). Will use eqs 123-125 in the GEMINI document, with typo in
+    # z-comp in eq 124 corrected (added a factor 3)
+    sf = np.sqrt(1+3*(np.cos(theta))**2)
+    sfm = 1-3*(np.cos(theta))**2
+    e1 = np.array([-3*np.cos(theta)*np.sin(theta)*np.cos(phi)/sf, 
+                   -3*np.cos(theta)*np.sin(theta)*np.sin(phi)/sf, 
+                   sfm/sf]).T
+    e2 = np.array([np.cos(phi)*sfm/sf, np.sin(phi)*sfm/sf, 
+                   3*np.cos(theta)*np.sin(theta)/sf]).T
+    e3 = np.array([-np.sin(phi), np.cos(phi), np.zeros(phi.size)]).T
+    
+    Gs = []
+    N = lat.size
+    for i in range(N):
+        G_ecef = np.vstack((egmlon[i,:],egmlat[i,:],egmalt[i,:]))
+        G_g = np.hstack((e1[i,:][:,np.newaxis],e2[i,:][:,np.newaxis],e3[i,:][:,np.newaxis]))
+        G = (G_ecef @ G_g).T
+        Gs.append(G)
+    Gs = np.swapaxes(np.swapaxes(np.array(Gs),1,0),2,1)    
+    
+    return Gs
+
+

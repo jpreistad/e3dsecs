@@ -21,7 +21,6 @@ described in this document: https://www.overleaf.com/project/6329caf229ba68180bc
 import numpy as np
 from secsy import utils as secsy
 import os
-from gemini_tools import RE as RE
 from scipy.interpolate import RectBivariateSpline
 import pandas as pd
 import scipy
@@ -29,12 +28,16 @@ import matplotlib.pyplot as plt
 
 try:
     from . import gemini_tools
+    RE = gemini_tools.RE
     from . import diagnostics
     from . import coordinates
+
 except:
     import gemini_tools
     import diagnostics
     import coordinates
+    from gemini_tools import RE as RE
+
 
 def get_alt_index(alts_grid, alt, returnfloat=False):
     """
@@ -1484,14 +1487,14 @@ def run_inversion(grid, alts_grid, datadict, inputmode='vi', lmodel=None,
             # cov[:,:,nans] = 1e-8 # seems like a large number 
             large = np.abs(cov) > 1e-8
             cov[large] = 1e-8 # Crazy values make the inversion of Cd fail.
-            fudge = 0.99 # To make the invesion not fail (Spencers fix)
+            # fudge = 0.99 # To make the invesion not fail (Spencers fix)
             Cd = np.zeros((N*3,N*3)) # Data covariance matrix
             Cd[:N,:N] = np.diag(cov[2,2,:])# upper left, corresponds to all r components
             Cd[N:2*N,N:2*N] = np.diag(cov[1,1,:])# center block, corresponds to 
                                                     # all theta components
             Cd[2*N:3*N,2*N:3*N] = np.diag(cov[0,0,:]) # bottom right block, 
                                             # corresponds to all phi components
-            Cd[:N,N:2*N] = np.diag(cov[2,1,:]) * fudge # upper center block, corresponds 
+            Cd[:N,N:2*N] = np.diag(cov[2,1,:])# * fudge # upper center block, corresponds 
                                                 # to r-theta covariance
             Cd[:N,2*N:3*N] = np.diag(cov[2,0,:])# upper right block, corresponds 
                                                 # to r-phi covariance
@@ -1503,8 +1506,8 @@ def run_inversion(grid, alts_grid, datadict, inputmode='vi', lmodel=None,
                                                 # corresponds to phi-r covariance
             Cd[2*N:3*N,N:2*N] = np.diag(cov[0,1,:])# lower row, center block, 
                                                 # corresponds to phi-theta covariance
-            Cdinv = np.linalg.inv(Cd)
-            # Cdpinv = np.linalg.pinv(Cd)
+            # Cdinv = np.linalg.inv(Cd)
+            Cdinv = np.linalg.pinv(Cd)
             w_i = spatial_weight * Cdinv * iweight
             GTG_i = G.T.dot(w_i).dot(G)
             GTd_i = G.T.dot(w_i).dot(d)

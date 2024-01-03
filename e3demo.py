@@ -31,17 +31,17 @@ except:
 
 ########################################
 # Run options
-maph = 200              # height of mapping of ion velocity, in km.
-extend = 5              # How many padding "frames" used for lompe grid around 3D hor. grid
+maph            = 200   # height of mapping of ion velocity, in km.
+extend          = 5     # How many padding "frames" used for lompe grid around 3D hor. grid
 inputmode = 'vi'        # How jperp is estimated. Must be either:
                         #   'vi'            : Use samples of ion velocities and (vi-ve)
                         #   'vi_ohmslaw'    : Use samples of ion velocities and Ohms law
                         #   'phitop'        : Use potential at top from GEMINI and (vi-ve)
                         #   'phitop_ohmslaw': Use potential at top from GEMINI and Ohms law
                         #   'jperp'         : Use jperp directly sampled from GEMINI
-l1_lompe = 1e-1         # Regularization parameter for Lompe representation
-l2_lompe = 1e0          # Regularization parameter for Lompe representation
-l1 = 1e-2               # Regularization parameter for 3D reconstruction inversion
+l1_lompe        = 1e-1  # Regularization parameter for Lompe representation
+l2_lompe        = 1e0   # Regularization parameter for Lompe representation
+l1              = 1e-2  # Regularization parameter for 3D reconstruction inversion
 intsec          = 5*60  # Integrationtime in seconds used in E3DOUBT
 factop          = True  # Provide values of vertical current at top of domain
 vert_profile    = None  # Regularize vertical Hall and Pedersen profile based on 
@@ -49,7 +49,7 @@ vert_profile    = None  # Regularize vertical Hall and Pedersen profile based on
 vert_dprofile   = False # Regularize vertical profile of gradient of H/P currents 
                         # based on electron density profile. NOT WORKING
 gcv             = False # Determine 3D model reg. parameter using GCV score
-overwrite      = True  # Overwrites exisring 3D model coefficient file
+overwrite       = True  # Overwrites exisring 3D model coefficient file
 e3doubt_        = True  # Estimate sample (co)variances of ne and v with E3DOUBT
 addnoise        = True  # Adds noise to data based on the E3DOUBT variances
 diagnostic      = True  # Wheter to make diagnostic plots
@@ -84,7 +84,6 @@ alts_grid = np.concatenate((np.arange(90,140,5),np.arange(140,170,10),
 altres = np.diff(alts_grid)*0.5
 altres = np.abs(np.concatenate((np.array([altres[0]]),altres)))
 # Horizontal CS grid
-# CHECK: altitude of grid. In 3D model it needs to be bottom layer
 grid, grid_l = gemini_tools.make_csgrid(xg, maph=maph, h0=alts_grid[0], crop_factor=0.2,
                                     resolution_factor=0.45, extend=extend, dlat = 0.2)
 #Grid dimensions
@@ -115,8 +114,8 @@ if e3doubt_:
     datadict = uncertainty.remove_bad(datadict)
     datadict_backup = datadict.copy()
     if addnoise:
-        datadict = uncertainty.add_noise(datadict,grid, minalt=maph)
-    lompedata = uncertainty.make_datacov_lompe(datadict.copy(), grid_l, minalt=maph)
+        datadict = uncertainty.add_noise(datadict, maph)
+    lompedata = uncertainty.make_datacov_lompe(datadict.copy(), grid_l, maph)
     # Do Lompe fit (actually, just to initialise model object)
     lmodel = gemini_tools.lompe_fit(lompedata, grid_l, l1=l1_lompe, l2=l2_lompe, 
                             altlim = maph, e3doubt_=e3doubt_)

@@ -448,10 +448,12 @@ def plot_e3dfov(ax, lat0, lon0, alt0, lat1, lon1, alt1, color='C1', **kwargs):
 
                 
 
-def plot_field_line(ax, lat0, lon0, alts_grid, color='grey', dipoleB=False, **kwargs):
+def plot_field_line(ax, glat0, glon0, alts_grid, color='grey', dipoleB=False, **kwargs):
+    # here, inlut location must be geographic. dipoleB specified if one shoud
+    # plot a dipole line or IGRF if false.
     if dipoleB: 
         from gemini3d.grid import convert
-        mlon_, mtheta_ = convert.geog2geomag(lon0,lat0)
+        mlon_, mtheta_ = convert.geog2geomag(glon0,glat0)
         m_theta = np.arcsin(np.sqrt((RE+alts_grid)/(RE+alts_grid[0]))*np.sin(mtheta_))
         m_mlon = np.ones(alts_grid.size)*mlon_
         m_glon, m_glat = convert.geomag2geog(m_mlon, m_theta)
@@ -460,7 +462,7 @@ def plot_field_line(ax, lat0, lon0, alts_grid, color='grey', dipoleB=False, **kw
 
     else:
         apex = apexpy.Apex(2022)
-        mlat0, mlon0 = apex.geo2apex(lat0, lon0, alts_grid[0])
+        mlat0, mlon0 = apex.geo2apex(glat0, glon0, alts_grid[0])
         xs = []
         ys = []
         zs = []
@@ -631,7 +633,7 @@ def plot_slice(ax, grid, alts_grid, lat, lon, alt, data, clim = 5e-5, azim=-26,
     ax.set_axis_off()
     ax.view_init(azim=azim, elev=elev)
     # spherical_grid(ax, lat, lon, alt, color='blue')
-    field_aligned_grid(ax, grid, alts__, color='green', dipoleB=True)
+    field_aligned_grid(ax, grid, alts__, color='green', dipoleB=dipole_lompe)
     kwargs={'linewidth':3}
     for kk in range(lat[0,-1,:].size):
         plot_field_line(ax, lat[0,-1,kk], lon[0,-1,kk], 

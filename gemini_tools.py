@@ -571,6 +571,12 @@ def sample_eiscat(xg, dat, dr = 1, az=None, el=None, sitelat=67.36, sitephi=23.,
                                      poss[:,2],90-poss[:,1])
     datadict['vu'] = model2pointsgeogcoords(xg, dat['vu'],(poss[:,0]-RE)*1e3,
                                      poss[:,2],90-poss[:,1])
+    datadict['v1'] = model2pointsgeogcoords(xg, dat['v1'],(poss[:,0]-RE)*1e3,
+                                     poss[:,2],90-poss[:,1])
+    datadict['v2'] = model2pointsgeogcoords(xg, dat['v2'],(poss[:,0]-RE)*1e3,
+                                     poss[:,2],90-poss[:,1])
+    datadict['v3'] = model2pointsgeogcoords(xg, dat['v3'],(poss[:,0]-RE)*1e3,
+                                     poss[:,2],90-poss[:,1])
 
     if 'divjperp' in dat.keys():
         datadict['divjperp'] = model2pointsgeogcoords(xg, dat['divjperp'],
@@ -710,7 +716,7 @@ def lompe_fit(datadict, grid_l, l1=1, l2=1, altlim = 200, e3doubt_=False,
 
     # Create new grid so that the SECS nodes used to represent Lompe model parameters
     # aligns with the nodes in the input grid (may or may not be the same as used 
-    # for current densiry reconstruction. Should in any case could cover a larger
+    # for current density reconstruction. Should in any case cover a larger
     # region to avoid boundary effects from the Lompe fit in the interior of the
     # 3D modelling region
     
