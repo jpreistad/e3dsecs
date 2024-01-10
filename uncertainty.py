@@ -19,20 +19,21 @@ import scipy
 from scipy.stats import multivariate_normal
 
 try:
-    from . import secs3d
     from . import gemini_tools
     from . import coordinates
     RE = gemini_tools.RE
 
 except:
-    import secs3d
     from gemini_tools import RE as RE
     import coordinates
 
-RE = 6371.2 #Earth radius in km
+# RE = 6371.2 #Earth radius in km
 
 
-def get_datacov_e3doubt(ddict, intsec = 5*60):
+def get_datacov_e3doubt(ddict, intsec = 5*60, transmitter=('ski_mod', 67.2,23.7), 
+                        receivers=[('ski_mod', 67.2,23.7), 
+                                   ('kai_mod', 66.18,22.54), 
+                                   ('krs_mod', 66.25,25.92)]):
     '''
     Thus function calls E3DOUBT to estimate datacovariance matrix at each
     sample location in ddict.
@@ -78,6 +79,9 @@ def get_datacov_e3doubt(ddict, intsec = 5*60):
 
     ddict['cov_vi'] = cov
     ddict['var_ne'] = uncert.dnemulti.values
+    ddict['noise_added'] = False
+    
+
 
     return ddict    
 
@@ -125,7 +129,7 @@ def remove_bad(ddict):
             
 
 
-def add_noise(ddict, minalt):
+def add_noise(ddict, minalt, alternative = True):
     '''
     Add noise to the samples from GEMINI by using the covariace matrix obtained 
     from E3DOUBT.
@@ -165,6 +169,12 @@ def add_noise(ddict, minalt):
     cov matrix is used when generating the noise, and that no noise will be added
     in the field-aligned direction.
     
+    For the real application of E3D, vperp must be estimated from the noisy v.
+    In retrospect, I see that this function would be simplified doing it that way.
+    I would therefore reccomend a rewrite to add the noise directly to v, and then
+    compute vperp and vperpmapped from that. This is now implemented with the
+    alternative keyword. Did not seem to affect things much.
+    
 
     Parameters
     ----------
@@ -180,6 +190,11 @@ def add_noise(ddict, minalt):
     '''
     
     N = ddict['lat'].size
+
+    # Arrays to hold the result
+    v_enu_noisy = np.zeros((N,3))
+    vperp_enu_noisy = np.zeros((N,3))
+    vperpmapped_enu_noisy = np.zeros((N,3))      
     
     # 0) obtain matrices that map the covairances:
     Gperpmapped = _make_vperpmappedG(ddict, minalt)
@@ -188,47 +203,58 @@ def add_noise(ddict, minalt):
     _perp = np.eye(3)
     _perp[0,0] = 0 # select only perp components in GEMINI basis
   
-    # Arrays to hold the result
-    vperp_enu_noisy = np.zeros((N,3))
-    vperpmapped_enu_noisy = np.zeros((N,3))
-
-    for i in range(N):     
-        cov = ddict['cov_vi'][:,:,i]
-
-        # 1) Add noise to vperpmapped
-        # 1.1: obtain covariance of vperpmapped(e,n,u) observations:
-        Gi = Gperpmapped[:,:,i]
-        # Propagate covariance of v into the mapped vperp at minalt
-        cov_vperpmapped_enu = Gi.dot(cov).dot(Gi.T) 
-        # Map vperpmaped_enu into GEMINI basis
-        vperpmapped_enu = np.hstack((ddict['vperpmappede'][i],ddict['vperpmappedn'][i],ddict['vperpmappedu'][i]))
-        vperpmapped_g = Gs[:,:,i].dot(vperpmapped_enu)
-        # Map covariance of vperpmapped into GEMINI basis
-        cov_vperpmapped_g = _perp @ (Gs[:,:,i] @ cov_vperpmapped_enu @ Gs[:,:,i].T) @ _perp.T
-        # Make some noise
-        _noise = multivariate_normal(mean=np.zeros(2), cov=cov_vperpmapped_g[1:,1:])
-        noisy_obs = np.hstack((0,vperpmapped_g[1:] + _noise.rvs()))
-        # Project back into ENU space. Inverse transformation is the transpose
-        # cov_vperp_enu = Gs[:,:,i].T @ cov @ Gs[:,:,i]
-        vperpmapped_enu_noisy[i,:] = Gs[:,:,i].T.dot(noisy_obs)
+    if alternative:  
+        # Alternative approach: First add noise to full v, then estimate vperp and vmappedperp
+        for i in range(N):     
+            cov = ddict['cov_vi'][:,:,i]
+            vi = np.hstack((ddict['ve'][i], ddict['vn'][i], ddict['vu'][i]))
+            _noise = multivariate_normal(mean=np.zeros(3), cov=cov)
+            noisy_obs = np.hstack((vi + _noise.rvs()))
+            vperp_noisy = Gperp[:,:,i].dot(noisy_obs)
+            vperpmapped_noisy = Gperpmapped[:,:,i].dot(noisy_obs)
+            
+            v_enu_noisy[i,:] = noisy_obs
+            vperp_enu_noisy[i,:] = vperp_noisy
+            vperpmapped_enu_noisy[i,:] = vperpmapped_noisy
         
-        # 2) Add noise to vperp
-        # 2.1: obtain covariance of vperp(e,n,u) observations:
-        Gi = Gperp[:,:,i]
-        # Propagate covariance of v into vperp 
-        cov_vperp_enu = Gi.dot(cov).dot(Gi.T)
-        # Map vperp_enu into GEMINI basis
-        vperp_enu = np.hstack((ddict['vperpe'][i],ddict['vperpn'][i],ddict['vperpu'][i]))
-        vperp_g = Gs[:,:,i].dot(vperp_enu)
-        # vperp_g = np.hstack((0,ddict['v2'][i],ddict['v3'][i])) # true value
-        # Map covariance of vperp into GEMINI basis
-        cov_vperp_g = _perp @ (Gs[:,:,i] @ cov_vperp_enu @ Gs[:,:,i].T) @ _perp.T
-        # Make some noise
-        _noise = multivariate_normal(mean=np.zeros(2), cov=cov_vperp_g[1:,1:])
-        noisy_obs = np.hstack((0,vperp_g[1:] + _noise.rvs()))
-        # Project back into ENU space. Inverse transformation is the transpose
-        # cov_vperp_enu = Gs[:,:,i].T @ cov @ Gs[:,:,i]
-        vperp_enu_noisy[i,:] = Gs[:,:,i].T.dot(noisy_obs)
+    else:
+        for i in range(N):     
+            cov = ddict['cov_vi'][:,:,i]
+    
+            # 1) Add noise to vperpmapped
+            # 1.1: obtain covariance of vperpmapped(e,n,u) observations:
+            Gi = Gperpmapped[:,:,i]
+            # Propagate covariance of v into the mapped vperp at minalt
+            cov_vperpmapped_enu = Gi.dot(cov).dot(Gi.T) 
+            # Map vperpmaped_enu into GEMINI basis
+            vperpmapped_enu = np.hstack((ddict['vperpmappede'][i],ddict['vperpmappedn'][i],ddict['vperpmappedu'][i]))
+            vperpmapped_g = Gs[:,:,i].dot(vperpmapped_enu)
+            # Map covariance of vperpmapped into GEMINI basis
+            cov_vperpmapped_g = _perp @ (Gs[:,:,i] @ cov_vperpmapped_enu @ Gs[:,:,i].T) @ _perp.T
+            # Make some noise
+            _noise = multivariate_normal(mean=np.zeros(2), cov=cov_vperpmapped_g[1:,1:])
+            noisy_obs = np.hstack((0,vperpmapped_g[1:] + _noise.rvs()))
+            # Project back into ENU space. Inverse transformation is the transpose
+            # cov_vperp_enu = Gs[:,:,i].T @ cov @ Gs[:,:,i]
+            vperpmapped_enu_noisy[i,:] = Gs[:,:,i].T.dot(noisy_obs)
+            
+            # 2) Add noise to vperp
+            # 2.1: obtain covariance of vperp(e,n,u) observations:
+            Gi = Gperp[:,:,i]
+            # Propagate covariance of v into vperp 
+            cov_vperp_enu = Gi.dot(cov).dot(Gi.T)
+            # Map vperp_enu into GEMINI basis
+            vperp_enu = np.hstack((ddict['vperpe'][i],ddict['vperpn'][i],ddict['vperpu'][i]))
+            vperp_g = Gs[:,:,i].dot(vperp_enu)
+            # vperp_g = np.hstack((0,ddict['v2'][i],ddict['v3'][i])) # true value
+            # Map covariance of vperp into GEMINI basis
+            cov_vperp_g = _perp @ (Gs[:,:,i] @ cov_vperp_enu @ Gs[:,:,i].T) @ _perp.T
+            # Make some noise
+            _noise = multivariate_normal(mean=np.zeros(2), cov=cov_vperp_g[1:,1:])
+            noisy_obs = np.hstack((0,vperp_g[1:] + _noise.rvs()))
+            # Project back into ENU space. Inverse transformation is the transpose
+            # cov_vperp_enu = Gs[:,:,i].T @ cov @ Gs[:,:,i]
+            vperp_enu_noisy[i,:] = Gs[:,:,i].T.dot(noisy_obs)
         
     # update ddict with the added noise
     ddict['vperpmappede'] = vperpmapped_enu_noisy[:,0]
@@ -358,9 +384,11 @@ def make_cmpost(model, ddict, l1=1, l2=1):
     Cmpost.
 
     '''
-    ndim = 3    # use also vertival component in inversion, to take advantage of
+    ndim = 2    # use also vertival component in inversion, to take advantage of
                 # the knowledge of covariance. The covariance is also favorable
-                # in this direction
+                # in this direction. Turns out that the data covariance matrix 
+                # becomes singular when also using the vertial component. Unclear
+                # if this is an issue.
     
     # Lompe describe horizontal part of v_perp.
     lon = ddict['mappedglon']

@@ -1,0 +1,168 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Nov 14 21:28:57 2023
+
+@author: jone
+Make a figure of an example of a 3D grid
+
+"""
+
+
+
+import sys
+sys.path.append('/Users/jone/BCSS-DAG Dropbox/Jone Reistad/git/DAG/src')
+sys.path.append('/Users/jone/BCSS-DAG Dropbox/Jone Reistad')
+import git.e3dsecs as e3dsecs
+import numpy as np
+import apexpy
+from gemini3d.grid.convert import geomag2geog, geog2geomag
+import gemini3d.read as read
+import xarray as xr
+import time
+import lompe
+import matplotlib.pyplot as plt
+import secsy as cs
+from pysymmetry.utils.spherical import sph_to_car, car_to_sph
+
+
+#######################
+# Set global attributes and variables
+maph = 90
+dipole_lompe = False
+RE = 6371.2 #Earth radius in km
+
+
+########################################
+# Load GEMINI grid and data
+try:
+    path = "/home/ubuntu/gemini_data/run1/gemini_run_initial_mini/"
+    dat = xr.open_dataset(path+'temp_dat.nc')
+except:
+    path = "/Users/jone/BCSS-DAG Dropbox/Jone Reistad/projects/eiscat_3d/issi_team/gemini_output/"
+    dat = xr.open_dataset('/Users/jone/BCSS-DAG Dropbox/Jone Reistad/tmpfiles/temp3_dat.nc')
+xg = read.grid(path)
+xgdat = (xg, dat)
+# xg, dat = secs3d.gemini_tools.read_gemini(path, timeindex=-1, estimate_E_field=estimate_E_field,
+#                                     maph=maph, dipolelib=dipolelib_mapping)
+# dat.attrs={}
+# dat.to_netcdf('/Users/jone/BCSS-DAG Dropbox/Jone Reistad/tmpfiles/temp3_dat.nc')
+
+
+########################################
+# Define grids
+# Altitude grid
+alts_grid = np.concatenate((np.arange(90,140,5),np.arange(140,170,10), 
+                            np.arange(170,230,20),np.arange(230,500,50)))
+altres = np.diff(alts_grid)*0.5
+altres = np.abs(np.concatenate((np.array([altres[0]]),altres)))
+# Horizontal CS grid
+extend=5
+grid, grid_l = e3dsecs.gemini_tools.make_csgrid(xg, maph=maph, h0=alts_grid[0], crop_factor=0.2,
+                                    resolution_factor=0.45, extend=extend, dlat = 0.2)
+#Grid dimensions
+K = alts_grid.shape[0] #Number of vertival layers
+I = grid.shape[0] #Number of cells in eta direction
+J = grid.shape[1]  #Number of cells in xi direction 
+KIJ = K*I*J
+IJ = I*J
+######################################
+
+mlats0 = grid.lat_mesh
+mlons0 = grid.lon_mesh
+cs_scaling = (grid.xi.max()-grid.xi.min())/grid.L
+
+glats = grid.lat_mesh[np.newaxis]
+glons = grid.lon_mesh[np.newaxis]
+
+mlats = mlats0[np.newaxis]
+mlons = mlons0[np.newaxis]
+
+
+# Plot grid and coastlines:
+fig = plt.figure(figsize = (10, 10))
+ax = fig.add_subplot(111, projection='3d')
+ax.set_axis_off()
+e3dsecs.visualization.field_aligned_grid(ax, grid, alts_grid, color='green', showlayers=True, 
+                       showbase=True, fullbox=False, verticalcorners=False, 
+                       dipoleB=dipole_lompe)
+kwargs={'linewidth':3}
+lat = grid.lat_mesh[-1,:]
+lon = grid.lon_mesh[-1,:]
+for kk in range(lat.size):
+    e3dsecs.visualization.plot_field_line(ax, lat[kk], lon[kk], 
+                              alts_grid, color='orange', **kwargs, dipoleB=True)
+
+# Plot vertical height scale
+alts = np.array([0,100,200,300,400,500])
+N = len(alts)
+lats = np.array([grid.lat_mesh[-1,0]]*N)
+lons = np.array([grid.lon_mesh[-1,0]]*N)
+L = grid.L*1e-3
+Lres = grid.Lres*1e-3
+pos = grid.projection.position
+if dipole_lompe:
+    lons, lats = geomag2geog(np.radians(lats), np.pi/2 - np.radians(lons)) # returns in degrees
+x_, y_, z_ = sph_to_car((RE+alts, 90-lats, lons), deg=True)
+ax.plot(x_, y_, z_, color='black')
+for (ii,aa) in enumerate(alts):
+    ax.text(x_[ii], y_[ii], z_[ii], str(aa)+' km', ha='right')
+    
+# Plot projecte frame on ground level
+lats = np.hstack((grid.lat_mesh[:,-1],grid.lat_mesh[-1,:],grid.lat_mesh[:,0][::-1],grid.lat_mesh[0,:]))
+lons = np.hstack((grid.lon_mesh[:,-1],grid.lon_mesh[-1,:],grid.lon_mesh[:,0][::-1],grid.lon_mesh[0,:]))
+if dipole_lompe:
+    lons, lats = geomag2geog(np.radians(lats), np.pi/2 - np.radians(lons)) # returns in degrees
+x_, y_, z_ = sph_to_car((RE+0, 90-lats, lons), deg=True)
+ax.plot(x_, y_, z_, '--', color='black')
+
+# Add E3D sites
+sitelat = 67.7 #67.5       # geo lat of transmitter. Skibotn: 69.39
+sitelon = 23.       # geo lon of transmitter. Skibotn: 20.27
+dlat = 69.39- sitelat
+dlon = 20.26 - sitelon
+lats0 = np.array([69.39, 68.44, 68.37])
+lons0 = np.array([20.26, 22.48, 19.10])
+lats = np.array([sitelat, lats0[1]-dlat, lats0[2]-dlat])
+lons = np.array([sitelon, lons0[1]-dlon, lons0[2]-dlon])
+alts = np.array([0,0,0])
+# sites = ['Skibotn', 'Karesuando', 'Kaiseniemi']
+sites = ['Tx/Rx1', 'Rx2', 'Rx3']
+x, y, z = sph_to_car((RE+alts, 90-lats, lons), deg=True)
+for i,s in enumerate(sites):
+    ax.scatter(x[i], y[i], z[i], label=s, marker='*', s=55)
+ax.legend(frameon=False)
+
+# Add grid dimensions
+alt = int(alts_grid[0]) - 20
+sh = grid.shape
+# glon, glat = geomag2geog(np.radians(grid.lon[sh[0]//2,0]), np.radians(90-grid.lat[sh[0]//2,0]))
+glon = grid.lon[sh[0]//2+5,0] 
+glat = grid.lat[sh[0]//2,0]
+x_, y_, z_ = sph_to_car((RE+alt, 90-glat, glon), deg=True)
+w = grid.W/1000
+ax.text(x_[0], y_[0], z_[0], '%3i km' % w, 'y', fontsize=10) 
+
+glon = grid.lon[0,sh[1]//2] 
+glat = grid.lat[0,sh[1]//2-1]
+x_, y_, z_ = sph_to_car((RE+alt, 90-glat, glon), deg=True)
+l = grid.L/1000
+ax.text(x_[0], y_[0], z_[0], '%3i km' % l, fontsize=10) 
+
+# Fix viewing geometry
+lat_ = grid.projection.position[1] # in degrees
+lon_ = grid.projection.position[0] # in degrees
+L = grid.L*1e-3
+Lres = grid.Lres*1e-3
+x_, y_, z_ = sph_to_car((RE, 90-lat_, lon_), deg=True)
+xlim = (x_[0]-L+3*Lres, x_[0]+L-3*Lres) 
+ylim = (y_[0]-L+3*Lres, y_[0]+L-3*Lres) 
+# zlim = (RE, RE+alts_grid[-1]+1)
+zlim = (z_[0], z_[0]+ 0.7*alts_grid[-1])
+ax.set_xlim(xlim)
+ax.set_ylim(ylim)
+# ax.set_zlim(5600,6400)
+ax.set_zlim(zlim)
+ax.view_init(azim=-15, elev=0)
+fig.savefig('./plots/3dgrid_figure.pdf', dpi=250,bbox_inches='tight')
+

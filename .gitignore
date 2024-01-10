@@ -1,5 +1,7 @@
 # My own custom ignore stuff
 plots/uniform_sampling_slices/
+inversion_coefs/
+paper/inversion_coefs/
 
 
 # Byte-compiled / optimized / DLL files

@@ -1403,7 +1403,8 @@ def run_inversion(grid, alts_grid, datadict, inputmode='vi', lmodel=None,
     xg, dat = xgdat
 
     # Define filename and see if it exists
-    filename, filename_lompe = make_filenames(grid.projection.position, inputmode)
+    filename, filename_lompe = make_filenames(grid.projection.position, inputmode, 
+                                              factop=factop, vert_profile=vert_profile)
 
     # Check if coef files exists
     exists = os.path.isfile(filename)
@@ -1414,7 +1415,6 @@ def run_inversion(grid, alts_grid, datadict, inputmode='vi', lmodel=None,
     else:
         if exists and not overwrite:
             return (filename,)
-      
 
     #Grid dimensions
     K = alts_grid.shape[0] #Number of vertival layers
@@ -1531,7 +1531,7 @@ def run_inversion(grid, alts_grid, datadict, inputmode='vi', lmodel=None,
                    grid.lat_mesh[1:-1,1:-1], grid.lon_mesh[1:-1,1:-1])
         N = d.size
         spatial_weight = np.ones(N) # no spaial weighting since FACs are sampled on secs grid
-        error = 1e-6 # error in the ju data as sampled from GEMINI [A/m^2]
+        error = 1e-7 # error in the ju data as sampled from GEMINI [A/m^2]
         iweight = 1 # Relative weight of the GEMINI observations
         w_i = spatial_weight * 1/(error**2) * iweight
         GTG_i = G.T.dot(np.diag(w_i)).dot(G)
@@ -1627,12 +1627,13 @@ def run_inversion(grid, alts_grid, datadict, inputmode='vi', lmodel=None,
     if gcv:
         # resnorm, modelnorm, ls = Lcurve(GTG, GTd, altreg, Gcopy, dcopy, steps=10)   
         resnorm, modelnorm, ls = crossvalidation(GTG, GTd, altreg, xgdat, grid, 
-                                    alts_grid, inputmode=inputmode, steps=10)
+                                    alts_grid, inputmode=inputmode, steps=15, 
+                                    lmodel=lmodel)
         print(resnorm)
         print(modelnorm)
         print(ls)
         print('In the following, l1 = %5f is used.' % ls[np.argmin(resnorm)])
-        l1 = ls[np.argmin(resnorm)]
+        l1 = 10**(ls[np.argmin(resnorm)])
     l1star = l1 * gtg_mag
     Reg = np.diag(altreg) * l1star
     GG = GTG + Reg
@@ -1688,7 +1689,7 @@ def Lcurve(GTG, GTd, altreg, G, d, steps=10):
     '''    
     
     gtg_mag = np.median(np.diagonal(GTG))
-    ls = np.linspace(-15,8,steps)
+    ls = np.linspace(-12,5,steps)
     resnorm = []
     modelnorm = []
     for l in ls:
@@ -1785,7 +1786,9 @@ def crossvalidation(GTG, GTd, altreg, xgdat, grid, alts_grid,
 
     br, btheta, bphi = make_b_unitvectors(inputdict['Bu'],-inputdict['Bn'],inputdict['Be'])
     B = make_B(br, btheta, bphi)
-    G = make_G(grid, alts_grid, lat_ev, lon_ev, alt_ev, ext_factor=0, jperp=B)
+    G = make_G(grid, alts_grid, lat_ev.flatten()[inputdict['inds']==1], 
+               lon_ev.flatten()[inputdict['inds']==1], 
+               alt_ev.flatten()[inputdict['inds']==1], ext_factor=0, jperp=B)
 
     # Inversion
     gtg_mag = np.median(np.diagonal(GTG))
@@ -1818,7 +1821,7 @@ def crossvalidation(GTG, GTd, altreg, xgdat, grid, alts_grid,
     
     return (resnorm, modelnorm, ls)
 
-def make_filenames(position, inputmode):
+def make_filenames(position, inputmode, factop=False, vert_profile=False):
     '''
     Make the filenames of the coefficient and lompe model files    
 
@@ -1828,6 +1831,11 @@ def make_filenames(position, inputmode):
         Position tuple as contained in the CS projection class (lon,lat) in degrees.
     inputmode : str
         As defined in above functions.
+    factop : bool
+        If FAC pattern on top is given as input.
+    vert_profile : bool
+        If a specific vertical profile of Hall and Pedersen currents are
+        encouraged.
 
     Returns
     -------
@@ -1841,6 +1849,16 @@ def make_filenames(position, inputmode):
         sss = sss + '_vi-ve_lompe_ohmslaw'
     else:
         sss = sss + '_' + inputmode
+    
+    if factop:
+        sss = sss+'_factop'
+    else:
+        sss = sss + '_nofactop'
+        
+    if vert_profile == False:
+        sss = sss+'_no_vert_profile'
+    else:
+        sss = sss + '_vert_profile'
 
     filename = './inversion_coefs/3Dreconstruction'+sss+'_%4.2f_%4.2f.npy' % \
                 (position[0],position[1])

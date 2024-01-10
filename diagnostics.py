@@ -60,7 +60,7 @@ def compare_input_jperp(datadict, jjj2, inside, savesuff, secs_grid, alts_grid,
         slices = [sliceindex]
     clim = 20e-6
     if param == 'jperpr':
-        txt = '$\\vec{j}_{\perp,r}$'
+        txt = '$\\mathbf{j}_{\perp,r}$'
         ppp1 = j_perp[0:N].reshape(datadict['shape'])
         ppp1[~inside.reshape(datadict['shape'])] = np.nan
         _ppp2 = jjj2[0,:]
@@ -68,7 +68,7 @@ def compare_input_jperp(datadict, jjj2, inside, savesuff, secs_grid, alts_grid,
         ppp2[~inside.reshape(datadict['shape'])] = np.nan
         ppp2[inside.reshape(datadict['shape'])] = _ppp2
     elif param == 'jperptheta':
-        txt = '$\\vec{j}_{\perp,\\theta}$'
+        txt = '$\\mathbf{j}_{\perp,\\theta}$'
         ppp1 = j_perp[N:2*N].reshape(datadict['shape'])
         ppp1[~inside.reshape(datadict['shape'])] = np.nan
         _ppp2 = jjj2[1,:]
@@ -76,7 +76,7 @@ def compare_input_jperp(datadict, jjj2, inside, savesuff, secs_grid, alts_grid,
         ppp2[~inside.reshape(datadict['shape'])] = np.nan
         ppp2[inside.reshape(datadict['shape'])] = _ppp2
     elif param == 'jperpphi':
-        txt = '$\\vec{j}_{\perp,\phi}$'
+        txt = '$\\mathbf{j}_{\perp,\phi}$'
         ppp1 = j_perp[2*N:3*N].reshape(datadict['shape'])
         ppp1[~inside.reshape(datadict['shape'])] = np.nan
         _ppp2 = jjj2[2,:]
@@ -116,6 +116,8 @@ def compare_input_jperp(datadict, jjj2, inside, savesuff, secs_grid, alts_grid,
         cb1 = mpl.colorbar.ColorbarBase(cbarax, cmap=cmap,
                                     norm=norm,
                                     orientation='horizontal')
+        cb1.ax.tick_params(labelsize=16)
+        cb1.ax.xaxis.get_offset_text().set_fontsize(16)
         cb1.set_label('[A/m$^2$]', fontsize=16)
         if pdf:
             savename = './comparison_'+param+'_dim='+str(dim)+savesuff+'%03i.pdf' % sliceindex
@@ -128,7 +130,8 @@ def compare_input_jperp(datadict, jjj2, inside, savesuff, secs_grid, alts_grid,
         files.sort()
         gifname = './plots/uniform_sampling_slices/comparison_'+param+'_dim='+str(dim)+savesuff[:-1]+'.gif'  
         visualization.make_gif(files, filename=gifname, delete=True, duration = 1)
-
+    
+    return fig
 
 def compare_potentials(dat, grid, alts_grid, datadict, inside, model, dipole_lompe=True):
     # Plot GEMINI and Lompe potentials on top of each other
@@ -469,6 +472,7 @@ def reconsrtruction_performance(datadict, grid, alts_grid, lat_ev, lon_ev, alt_e
    
     import matplotlib
     N = jpar.size
+    datadict['jtheta'] = -datadict['jn']
     
     #Make gifs of performance in different slices
     ##################################3
@@ -488,12 +492,13 @@ def reconsrtruction_performance(datadict, grid, alts_grid, lat_ev, lon_ev, alt_e
         cmap = plt.cm.bwr
         norm = matplotlib.colors.Normalize(vmin=-clim, vmax=clim)
         fig = plt.figure(figsize=(15,10))
-        ax1 = plt.subplot2grid((20, 32), (0, 0), rowspan = 10, colspan = 10, projection='3d')
+        ax3 = plt.subplot2grid((20, 32), (0, 0), rowspan = 10, colspan = 10, projection='3d')
         ax2 = plt.subplot2grid((20, 32), (0, 10), rowspan = 10, colspan = 10, projection='3d')
-        ax3 = plt.subplot2grid((20, 32), (0, 20), rowspan = 10, colspan = 10, projection='3d')
+        ax1 = plt.subplot2grid((20, 32), (0, 20), rowspan = 10, colspan = 10, projection='3d')
         axs = [ax1,ax2,ax3]
-        plotparams = ['je', 'jn','ju']
-        plot_titles = ['$\\mathbf{j}_{east}$', '$\\mathbf{j}_{north}$', '$\\mathbf{j}_{up}$']
+        plotparams = ['je', 'jtheta','ju']
+        plot_titles = ['$\\mathbf{j}_{r}$', '$\\mathbf{j}_{\\theta}$', '$\\mathbf{j}_{\phi}$']
+        plot_titles.reverse()
         kwargs={'linewidth':1}
         
         #GEMINI on top
@@ -533,14 +538,14 @@ def reconsrtruction_performance(datadict, grid, alts_grid, lat_ev, lon_ev, alt_e
             ax.set_zlim(z0, z0+2*range_)
             ax.set_title(plot_titles[pp], fontsize=16)
             
-            if pp==0:
+            if pp==2:
                 x_, y_, z_ = sph_to_car((RE+0, 90-74, 37), deg=True)
                 ax.text(x_[0], y_[0], z_[0], 'GEMINI', fontsize=16)
         
         # Lower row is the reconstruction
-        ax4 = plt.subplot2grid((20, 32), (10, 0), rowspan = 10, colspan = 10, projection='3d')   
+        ax6 = plt.subplot2grid((20, 32), (10, 0), rowspan = 10, colspan = 10, projection='3d')   
         ax5 = plt.subplot2grid((20, 32), (10, 10), rowspan = 10, colspan = 10, projection='3d')   
-        ax6 = plt.subplot2grid((20, 32), (10, 20), rowspan = 10, colspan = 10, projection='3d')   
+        ax4 = plt.subplot2grid((20, 32), (10, 20), rowspan = 10, colspan = 10, projection='3d')   
         axs =[ax4,ax5,ax6]
         for pp, ax in enumerate(axs):
             ax.set_axis_off()
@@ -565,8 +570,8 @@ def reconsrtruction_performance(datadict, grid, alts_grid, lat_ev, lon_ev, alt_e
                 ppp = jpar
             elif plotparams[pp] == 'je':
                 ppp = full_j[2*N:3*N]
-            elif plotparams[pp] == 'jn':
-                ppp = -full_j[1*N:2*N]
+            elif plotparams[pp] == 'jtheta':
+                ppp = full_j[1*N:2*N]
             elif plotparams[pp] == 'ju':
                 ppp = full_j[0*N:1*N]
             
@@ -593,7 +598,7 @@ def reconsrtruction_performance(datadict, grid, alts_grid, lat_ev, lon_ev, alt_e
             ax.set_zlim(z0, z0+2*range_)
             ax.set_title(plot_titles[pp], fontsize=16)
             
-            if pp==0:
+            if pp==2:
                 x_, y_, z_ = sph_to_car((RE+0, 90-74, 37), deg=True)
                 ax.text(x_[0], y_[0], z_[0], '3D reconstruction', fontsize=16)        
         # Colorbar
@@ -636,7 +641,8 @@ def reconsrtruction_performance(datadict, grid, alts_grid, lat_ev, lon_ev, alt_e
             gifname = './plots/uniform_sampling_slices/gemini_comparison_ns-slice'+sss+'.gif'  
         files.sort()
         visualization.make_gif(files, filename=gifname, delete=True, duration = 1)
- 
+
+    return fig
     
 
 
@@ -693,15 +699,15 @@ def scatterplot_reconstruction(grid, alts_grid, datadict, lon, lat, alt, full_j,
     m_mlon = mlon_
     if dipolekw:
         inside = grid.ingrid(np.degrees(m_mlon), 90-np.degrees(m_theta), ext_factor=-2)
-        ax.scatter(-1e6*j_gm_enu[:,1],1e6*full_j[N:2*N], s=1, label='jtheta', color='C1')
-        ax.scatter(1e6*j_gm_enu[:,0],1e6*full_j[2*N:3*N], s=1, label='jphi', color='C2')
-        ax.scatter(1e6*j_gm_enu[:,2],1e6*full_j[0:N], s=1, label='jr', color='C0')
+        ax.scatter(-1e6*j_gm_enu[:,1],1e6*full_j[N:2*N], s=1, label='$\mathbf{j}_\\theta$', color='C1')
+        ax.scatter(1e6*j_gm_enu[:,0],1e6*full_j[2*N:3*N], s=1, label='$\mathbf{j}_\phi$', color='C2')
+        ax.scatter(1e6*j_gm_enu[:,2],1e6*full_j[0:N], s=1, label='$\mathbf{j}_r$', color='C0')
     else:    
         m_glon, m_glat = convert.geomag2geog(m_mlon, m_theta)
         inside = grid.ingrid(m_glon, m_glat, ext_factor=-2)
-        ax.scatter(-1e6*datadict['jn'],1e6*full_j[N:2*N], s=1, label='jtheta', color='C1')
-        ax.scatter(1e6*datadict['je'],1e6*full_j[2*N:3*N], s=1, label='jphi', color='C2')
-        ax.scatter(1e6*datadict['ju'],1e6*full_j[0:N], s=1, label='jr', color='C0')
+        ax.scatter(-1e6*datadict['jn'],1e6*full_j[N:2*N], s=1, label='$\mathbf{j}_\\theta$', color='C1')
+        ax.scatter(1e6*datadict['je'],1e6*full_j[2*N:3*N], s=1, label='$\mathbf{j}_\phi$', color='C2')
+        ax.scatter(1e6*datadict['ju'],1e6*full_j[0:N], s=1, label='$\mathbf{j}_r$', color='C0')
     highalt = alt > 200
     ax.scatter(1e6*datadict['fac'][highalt],1e6*jpar[highalt], s=1, label='FAC>200km', color='C3')
     if inout:
@@ -711,13 +717,16 @@ def scatterplot_reconstruction(grid, alts_grid, datadict, lon, lat, alt, full_j,
         r_inside = np.corrcoef(1e6*datadict['fac'][inside],1e6*jpar[inside])[0,1]
         ax.text(0.1,0.3, 'correlation inside: %4.2f' % r_inside, color='C3', transform = ax.transAxes)
         ax.text(0.1,0.2, 'correlation outside: %4.2f' % r_outside, color='C4', transform = ax.transAxes)
-    lgnd = ax.legend()
+    lgnd = ax.legend(frameon=False)
+    ax.spines[['right', 'top']].set_visible(False)
     # lgnd.legendHandles[0]._legmarker.set_markersize(6)
     # lgnd.legendHandles[1]._legmarker.set_markersize(6)
     ax.set_xlabel('GEMINI $[\mu A/m^2]$')
-    ax.set_ylabel('SECS $[\mu A/m^2]$')
+    ax.set_ylabel('3D SECS $[\mu A/m^2]$')
     ax.set_ylim(-120,120)
     ax.set_xlim(-120,120)
+    
+    return fig
     
     # sum(np.abs(residual_r/d[0:N])<0.2)/N
     # sum(np.abs(residual_r/d[0:N])[inside]<0.2)/sum(inside)
@@ -833,7 +842,9 @@ def scatterplot_lompe(ax, lmodel, datadict, xgdat):
     return ax
 
 def snr_output_plot(covar_j, meshgrid, datadict, grid, alts_grid, Cmpost, clim=2e-5, 
-                    cut='j', ind=5):
+                    cut='j', ind=5, transmitter=('ski_mod', 67.5, 23.7), 
+                    receivers=[('ski_mod', 67.5, 23.7),
+                     ('krs_mod', 66.55, 25.92), ('kai_mod', 66.48, 22.54)]):
 
     # ind = 5 # slice index to show
     # cut = 'k' # slice dimension
@@ -865,18 +876,18 @@ def snr_output_plot(covar_j, meshgrid, datadict, grid, alts_grid, Cmpost, clim=2
     fig = plt.figure(figsize=(15,10))
     
     # Top row showing 3D reconstruction uncertainties. Bottom row show SNR
-    ax1 = plt.subplot2grid((20, 32), (0, 0), rowspan = 10, colspan = 10, projection='3d')
+    ax3 = plt.subplot2grid((20, 32), (0, 0), rowspan = 10, colspan = 10, projection='3d')
     ax2 = plt.subplot2grid((20, 32), (0, 10), rowspan = 10, colspan = 10, projection='3d')
-    ax3 = plt.subplot2grid((20, 32), (0, 20), rowspan = 10, colspan = 10, projection='3d')
+    ax1 = plt.subplot2grid((20, 32), (0, 20), rowspan = 10, colspan = 10, projection='3d')
     axs = [ax1,ax2,ax3]
-    ax4 = plt.subplot2grid((20, 32), (10, 0), rowspan = 10, colspan = 10, projection='3d')
+    ax6 = plt.subplot2grid((20, 32), (10, 0), rowspan = 10, colspan = 10, projection='3d')
     ax5 = plt.subplot2grid((20, 32), (10, 10), rowspan = 10, colspan = 10, projection='3d')
-    ax6 = plt.subplot2grid((20, 32), (10, 20), rowspan = 10, colspan = 10, projection='3d')
+    ax4 = plt.subplot2grid((20, 32), (10, 20), rowspan = 10, colspan = 10, projection='3d')
     axs2 = [ax4,ax5,ax6] 
     plotparams = ['je', 'jn','ju']
-    plot_titles = ['$\\sigma_{\\mathbf{j}_{east}}$', '$\\sigma_{\\mathbf{j}_{north}}$', '$\\sigma_{\\mathbf{j}_{up}}$']
+    plot_titles = ['$\\sigma_{\\mathbf{j}_{\phi}}$', '$\\sigma_{\\mathbf{j}_{\\theta}}$', '$\\sigma_{\\mathbf{j}_{r}}$']
     kwargs={'linewidth':1}
-    plot_titles2 = ['$|\mathbf{j}_{east, GEMINI}| / \\sigma_{\\mathbf{j}_{east}}$', '$|\mathbf{j}_{north, GEMINI}| / \\sigma_{\\mathbf{j}_{north}}$', '$|\mathbf{j}_{up, GEMINI}| / \\sigma_{\\mathbf{j}_{up}}$']
+    plot_titles2 = ['$|\mathbf{j}_{\phi, GEMINI}| / \\sigma_{\\mathbf{j}_{\phi}}$', '$|\mathbf{j}_{\\theta, GEMINI}| / \\sigma_{\\mathbf{j}_{\\theta}}$', '$|\mathbf{j}_{r, GEMINI}| / \\sigma_{\\mathbf{j}_{r}}$']
     
     for pp, ax in enumerate(axs):
         if pp == 0:
@@ -896,7 +907,7 @@ def snr_output_plot(covar_j, meshgrid, datadict, grid, alts_grid, Cmpost, clim=2
         ax.set_title(plot_titles[pp], fontsize=16)
         ax2 = visualization.field_aligned_grid(ax2, grid, alts_grid, color='green', dipoleB=False, **kwargs)
         ax2.set_title(plot_titles2[pp], fontsize=16)
-        if pp==0:
+        if pp==2:
             x_, y_, z_ = sph_to_car((RE+0, 90-74, 37), deg=True)
             ax.text(x_[0], y_[0], z_[0], 'Uncertainty', fontsize=16)
             ax2.text(x_[0], y_[0], z_[0], 'SNR', fontsize=16)
@@ -911,20 +922,21 @@ def snr_output_plot(covar_j, meshgrid, datadict, grid, alts_grid, Cmpost, clim=2
                                          ind=ind[ii], clim=5, diverging=False, cmap='viridis')
                 # Plot the radar site locations
                 alts = np.ones(3)*0.01
-                glats = np.array([67.2, 66.18, 66.25])
-                glons = np.array([23.7, 22.54, 25.92])
+                glats = np.array([receivers[0][1], receivers[1][1], receivers[2][1]])
+                glons = np.array([receivers[0][2], receivers[1][2], receivers[2][2]])
                 x_, y_, z_ = sph_to_car((RE+alts, 90-glats, glons), deg=True)
                 ax.scatter(x_, y_, z_, marker='*', c=['C0', 'C2', 'C1'])
-                if (c=='k') & (pp==0):
+                ax2.scatter(x_, y_, z_, marker='*', c=['C0', 'C2', 'C1'])
+                if (c=='k') & (pp==2):
                     alt = int(alt_ev[ind[ii],0,0])
-                    glon, glat = geomag2geog(np.radians(grid.lon[-1,0]), np.radians(90-grid.lat[-1,0]))
-                    x_, y_, z_ = sph_to_car((RE+alt, 90-glat-0.4, glon), deg=True)
+                    # glon, glat = geomag2geog(np.radians(grid.lon[-1,0]), np.radians(90-grid.lat[-1,0]))
+                    x_, y_, z_ = sph_to_car((RE+alt, 90-grid.lat[-1,0]-0.4, grid.lon[-1,0]), deg=True)
                     ax.text(x_[0], y_[0], z_[0], str(alt)+' km', fontsize=10)
                     ax2.text(x_[0], y_[0], z_[0], str(alt)+' km', fontsize=10)
                     
                 
-    # Colorbar
-    cbarax = plt.subplot2grid((20,32), (5, 31), rowspan = 10, colspan = 1)
+    # Colorbar SNR
+    cbarax = plt.subplot2grid((20,32), (10, 31), rowspan = 8, colspan = 1)
     cmap = plt.cm.viridis
     import matplotlib as mpl
     norm = mpl.colors.Normalize(vmin=0, vmax=5)
@@ -934,4 +946,17 @@ def snr_output_plot(covar_j, meshgrid, datadict, grid, alts_grid, Cmpost, clim=2
     cb1.set_label('[SNR]', fontsize=16)
     cb1.ax.yaxis.set_label_coords(-1.3, 0.5)                
     
-    fig.savefig('./plots/paperfigures/3d_uncertainty.pdf',bbox_inches='tight', dpi=300)
+    # Colorbar error
+    cbarax = plt.subplot2grid((20,32), (0, 31), rowspan = 8, colspan = 1)
+    cmap = plt.cm.bwr
+    import matplotlib as mpl
+    norm = mpl.colors.Normalize(vmin=-clim, vmax=clim)
+    cb2 = mpl.colorbar.ColorbarBase(cbarax, cmap=cmap,
+                                norm=norm,
+                                orientation='vertical')
+    cb2.set_label('[A/m$^2$]', fontsize=16)
+    cb2.ax.yaxis.set_label_coords(-1.3, 0.5)                
+    
+    return fig
+    
+    # fig.savefig('./3d_uncertainty.pdf',bbox_inches='tight', dpi=300)

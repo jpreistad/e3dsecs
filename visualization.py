@@ -597,7 +597,7 @@ def plot_resolution(ax, grid, alts_grid, kij, psf, az=-26, el=7, clim=1e-6,
         ax.set_title('PSF at k='+str(k)+', i='+str(i)+', j='+str(j))
         
         
-def plot_slice(ax, grid, alts_grid, lat, lon, alt, data, clim = 5e-5, azim=-26, 
+def plot_slice(ax, grid, alts_grid, lat, lon, alt, data, clim = 5e-5, azim=-20, 
                elev=7, dipole_lompe=True, dim = 0, sliceindex = 0, parameter='No name', 
                maph=None):
     '''

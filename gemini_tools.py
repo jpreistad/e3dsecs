@@ -32,10 +32,12 @@ try:
     # from . import visualization
     from . import secs3d
     from . import coordinates
+    from . import uncertainty
 except:
     # import visualization
     import secs3d
     import coordinates
+    import uncertainty
 
 
 def read_gemini(path, timeindex=-1, maph=200):
@@ -1098,3 +1100,93 @@ def dipole_B(theta, height = 500):
     Btheta =  -mu0 * m * np.sin(theta) / (4*np.pi*(RE+height*1e3)**3)
     Bn = -Btheta
     return (Bn, Bu)
+
+
+def make_lompe(grid_l, datadict, inputmode, maph, e3doubt_=True, 
+               l1_lompe=1e-2, l2_lompe=1e-2, intsec=5*60, 
+               filename_lompe='./inversion_coefs/lmodel.npy'):
+    '''
+    Make the lompe object that is used for the continous vperp description
+    at maph altitude.
+
+    Parameters
+    ----------
+    grid_l : SC grid object
+        The grid object to be used for the Lompe fit, which should be an extended
+        verstion of the one used in the 3D model.
+    datadict : dict
+        Contain the input data sampled from GEMINI.
+    inputmode : str
+        Determines how the input jperp to the 3D model is obtained. Must be one of:
+            vi             : use sampled ion velocities, and jperp=ne(vi_perp-ve_perp)
+            vi_ohmslaw     : use sampled ion velocities, but estimate jperp using
+                             Ohms law, meaning that a conductance estimate must also
+                             be used
+            phitop         : Use potential at top from GEMINI and (vi-ve)                             
+            phitop_ohmslaw : Use potential at top from GEMINI for E, and Ohms law
+            jperp          : Use jperp directly sampled from GEMINI
+    maph : int or float
+        Height in km of altitude of where to make the Lompe representation. Also 
+        the altitude of where ion obs are assumed to be not affected by collissions.
+    e3doubt_ : bool, optional
+        Wheter to estimate realistic uncertainties in the sampling.. The default is True.
+    l1_lompe : bool, optional
+        Lompe l1 regularization parameter. The default is 1e-2.
+    l2_lompe : bool, optional
+        Lompe l2 regularization parameter. The default is 1e-2.
+    intsec : float or int, optional
+        Number of seconds of integration when estimating unertainties with E3DOUBT. 
+        The default is 5*60.
+    filename_lompe : str, optional
+        Filename of the saved lompe object. The default is './inversion_coefs/lmodel.npy'.
+
+    Returns
+    -------
+    2 element tuple
+    
+    datadict : dict
+        With updated values.
+    lmodel : lompe object
+        The estimated Lompe model.
+    '''
+    
+    if (inputmode == 'vi') or (inputmode == 'vi_ohmslaw'):    
+        if e3doubt_:
+            # Make the data covariance matrix for input data to lompe
+            lompedata = uncertainty.make_datacov_lompe(datadict.copy(), grid_l, maph)
+            
+            # Initialise Lompe model object (will not use the fit done here)
+            lmodel = lompe_fit(lompedata, grid_l, l1=l1_lompe, l2=l2_lompe, 
+                                    altlim = maph, e3doubt_=True)
+            # Do the lompe inversion and calculate model covariance matrix
+            m, Cmpost = uncertainty.make_cmpost(lmodel, lompedata, l1=l1_lompe, l2=l2_lompe)
+            lmodel.m = m.copy()
+            
+            # Calculate the covariance matrix of lompe representation of v_perp at maph
+            # at the locations that map to each observation, 'covVlompe'
+            datadict = uncertainty.make_lompe_v_cov(lmodel, datadict, Cmpost)
+            # Calculate covariance of predicted electron perp velocity when mapped to
+            # measurement locations, 
+            datadict = uncertainty.make_ve_cov(lmodel, datadict)
+            # Calculate covariance of jperp based on (vi_perp-ve_perp)
+            datadict = uncertainty.make_cov_jperp(datadict)
+            # datadict_backup = datadict.copy()
+        else:
+            lmodel = lompe_fit(datadict.copy(), grid_l, l1=l1_lompe,
+                                            l2=l2_lompe, altlim = maph, 
+                                            e3doubt_=e3doubt_)
+           # Make up some covatiance values
+            _cov = np.zeros((3,3,datadict['lat'].size))
+            _cov[0,0,:] = 1e-6
+            _cov[1,1,:] = 1e-6
+            _cov[2,2,:] = 1e-7
+            datadict['cov_jperp'] = _cov
+            
+        ds = lmodel.save()
+        ds.to_netcdf(filename_lompe)
+        print('Saved Lompe file.')
+
+    else:
+        lmodel=None
+    
+    return (datadict, lmodel)
