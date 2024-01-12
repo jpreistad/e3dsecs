@@ -1531,7 +1531,7 @@ def run_inversion(grid, alts_grid, datadict, inputmode='vi', lmodel=None,
                    grid.lat_mesh[1:-1,1:-1], grid.lon_mesh[1:-1,1:-1])
         N = d.size
         spatial_weight = np.ones(N) # no spaial weighting since FACs are sampled on secs grid
-        error = 1e-7 # error in the ju data as sampled from GEMINI [A/m^2]
+        error = 1e-6 # error in the ju data as sampled from GEMINI [A/m^2]
         iweight = 1 # Relative weight of the GEMINI observations
         w_i = spatial_weight * 1/(error**2) * iweight
         GTG_i = G.T.dot(np.diag(w_i)).dot(G)
@@ -1541,7 +1541,7 @@ def run_inversion(grid, alts_grid, datadict, inputmode='vi', lmodel=None,
 
     # Regularize based on vert profile of hall/ped currents from GEMINI
     if vert_profile is not None:
-        # Make new grid for the model padding from IRI of vertical gradients in H/P currents     
+        # Make new grid for the model padding from IRI of vertical H/P currents     
         use = alts_grid[1:] >= vert_profile
         alts__ = alts_grid[1:][use]-altres[1:][use]
         xi_e  = grid.xi[0,1:] - grid.dxi/2 
@@ -1557,10 +1557,11 @@ def run_inversion(grid, alts_grid, datadict, inputmode='vi', lmodel=None,
         _ddict['maph'] = datadict['maph']
         jh, jp = gemini_tools.calc_hall_pedersen(_ddict, inputmode=inputmode, 
                                                  lmodel=lmodel, xgdat=xgdat)  
-        d = jp
+        # d = jp
+        d = np.zeros(jp.size)
         N = d.size
         spatial_weight = np.ones(N) # no spaial weighting here, since FACs are samped on secs grid
-        error = 1e-5#0.1*d.max()#6e-5 # error in the jp "data" from IRI/MSIS model [A/m^2]
+        error = 1e-6#0.1*d.max()#6e-5 # error in the jp "data" from IRI/MSIS model [A/m^2]
         iweight = 0.1 # Relative weight of the GEMINI observations
         w_i = spatial_weight * 1/(error**2) * iweight
         GTG_i = G.T.dot(np.diag(w_i)).dot(G)
@@ -1570,10 +1571,11 @@ def run_inversion(grid, alts_grid, datadict, inputmode='vi', lmodel=None,
         G, inds = make_JHP(grid, alts_grid, lat_ev.flatten(), lon_ev.flatten(), 
                            alt_ev.flatten(), inputmode='vi', hop='h', 
                            return_indices=True, xgdat=xgdat, lmodel=lmodel)
-        d = jh
+        # d = jh
+        d = np.zeros(jh.size)
         N = d.size
         spatial_weight = np.ones(N) # no spaial weighting here, since FACs are samped on secs grid
-        error = 1e-5#0.1*d.max() # error in the jp "data" from IRI/MSIS model [A/m^2]
+        error = 1e-6#0.1*d.max() # error in the jp "data" from IRI/MSIS model [A/m^2]
         iweight = 0.1 # Relative weight of the GEMINI observations
         w_i = spatial_weight * 1/(error**2) * iweight
         GTG_i = G.T.dot(np.diag(w_i)).dot(G)
@@ -1833,7 +1835,7 @@ def make_filenames(position, inputmode, factop=False, vert_profile=False):
         As defined in above functions.
     factop : bool
         If FAC pattern on top is given as input.
-    vert_profile : bool
+    vert_profile : None or int
         If a specific vertical profile of Hall and Pedersen currents are
         encouraged.
 
@@ -1855,7 +1857,7 @@ def make_filenames(position, inputmode, factop=False, vert_profile=False):
     else:
         sss = sss + '_nofactop'
         
-    if vert_profile == False:
+    if vert_profile is None:
         sss = sss+'_no_vert_profile'
     else:
         sss = sss + '_vert_profile'

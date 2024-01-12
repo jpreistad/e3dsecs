@@ -90,7 +90,7 @@ el      = None       # If None, use default values
 sitelat = 67.7       # geo lat of transmitter. Skibotn: 69.39
 sitelon = 23.       # geo lon of transmitter. Skibotn: 20.27
 dlat = 69.39- sitelat
-dlon = 20.26 - sitelon
+dlon = 20.27 - sitelon
 lats0 = np.array([69.39, 68.44, 68.37])
 lons0 = np.array([20.26, 22.48, 19.10])
 lats = np.array([sitelat, lats0[1]-dlat, lats0[2]-dlat])
@@ -128,10 +128,62 @@ else:
     
 ########################################################
 # PLOTING
+
+# GEMINI model figure
+fig = plt.figure(figsize=(5,5))
+ax = plt.subplot2grid((20, 21), (0, 0), rowspan = 20, colspan = 20)
+apex = apexpy.Apex(2023)
+# lompe.visualization.format_ax(ax, lmodel, apex = apex)
+ax.set_axis_off()
+ax.set_aspect('equal')
+N = lmodel.grid_E.lat.size
+RE = e3dsecs.gemini_tools.RE
+shape = lmodel.grid_E.shape
+datadict = e3dsecs.gemini_tools.sample_points(xg, dat, lmodel.grid_E.lat.flatten(), 
+                                              lmodel.grid_E.lon.flatten(), 
+                                              np.ones(N)*lmodel.R*1e-3-RE)
+br, btheta, bphi = e3dsecs.secs3d.make_b_unitvectors(datadict['Bu'], 
+                -datadict['Bn'], datadict['Be'])
+datadict['fac'] = np.sum(np.array([datadict['ju'], -datadict['jn'], datadict['je']]) * 
+                np.array([br, btheta, bphi]), axis=0)
+clim=2e-5
+levels = np.arange(-29000,-5000,3000)
+ax.contour(lmodel.grid_E.xi, lmodel.grid_E.eta, datadict['Phitop'].reshape(shape), 
+           colors='black', levels=levels)
+levels = np.linspace(-clim,clim,10)
+ax.contourf(lmodel.grid_E.xi, lmodel.grid_E.eta, -datadict['fac'].reshape(shape), 
+            cmap='bwr', levels=levels, extend='both')
+xi_corners = [grid_l.xi_mesh[0,extend],grid_l.xi_mesh[0,-extend-1],
+              grid_l.xi_mesh[0,-extend-1],grid_l.xi_mesh[0,extend],grid_l.xi_mesh[0,extend]]
+eta_corners = [grid_l.eta_mesh[extend,0], grid_l.eta_mesh[extend,0], 
+               grid_l.eta_mesh[-extend-1,0], grid_l.eta_mesh[-extend-1,0], 
+               grid_l.eta_mesh[extend,0]]
+ax.plot(xi_corners, eta_corners, color='green')
+ax.set_title('Electric potential and FAC in GEMINI')
+# Latitude contours
+levels = [62,64,66]
+phi, theta = geog2geomag(datadict['lon'], datadict['lat'])
+lat = 90-np.degrees(theta)
+cc = ax.contour(lmodel.grid_E.xi, lmodel.grid_E.eta, lat.reshape(shape), 
+           levels=levels, colors='grey', zorder=1000, linewidths=0.5)
+labels = ax.clabel(cc, inline=True, fontsize=8, colors='k', fmt='%2i$^\circ$')
+#Colorbar
+cbarax = plt.subplot2grid((20,21), (2, 20), rowspan = 16, colspan = 1)
+cmap = plt.cm.bwr
+import matplotlib as mpl
+norm = mpl.colors.Normalize(vmin=-clim, vmax=clim)
+cb1 = mpl.colorbar.ColorbarBase(cbarax, cmap=cmap,
+                            norm=norm,
+                            orientation='vertical')
+cb1.set_label('[A/m$^2$]', fontsize=12)
+
+fig.savefig('./plots/gemini.pdf',bbox_inches='tight')
+
+
+# Lompefit figure
 fig = plt.figure(figsize=(10,5))
 ax1 = plt.subplot2grid((11, 20), (0, 0), rowspan = 10, colspan = 10)
 ax2 = plt.subplot2grid((11, 20), (0, 10), rowspan = 11, colspan = 10)
-apex = apexpy.Apex(2023)
 lompe.visualization.format_ax(ax1, lmodel, apex = apex)
 lompe.visualization.plot_quiver(ax1, lmodel, 'convection')
 lompe.visualization.plot_potential(ax1, lmodel)
@@ -169,7 +221,7 @@ arrowax.set_axis_off()
 xi_map, eta_map = grid.projection.geo2cube(datadict['mappedglon'], datadict['mappedglat'])
 ax1.scatter(xi_map, eta_map, alpha=1, color='green', s=1.4)
 plt.tight_layout()
-fig.savefig('./plots/lompefit.pdf')
+fig.savefig('./plots/lompefit.pdf',bbox_inches='tight')
 
 ###################################################################
 
@@ -217,7 +269,7 @@ inside = np.array([True]*N)
 fig = e3dsecs.diagnostics.compare_input_jperp(datadict, jjj2, inside, 
                 savesuff, grid, alts_grid, sliceindex=3, 
                 maph=maph, dim=2, param='jperpphi', pdf=True)
-fig.savefig('./plots/input_jperp_'+inputmode+'.pdf', dpi=250)
+fig.savefig('./plots/input_jperp_'+inputmode+'.pdf', dpi=250,bbox_inches='tight')
           
 
 ###########################################
@@ -281,11 +333,19 @@ if e3doubt_:
     cb2.set_label('[SNR]', fontsize=16)
     
     # SNR line plot    
-    n =3
-    d=-8
+    n = 18 #3
+    d =-10 # -8
     nn = datadict['alts'].size
-    ax3.plot(datadict['SNRe'][n*nn+d:n*nn+20+d], datadict['alt'][n*nn+d:n*nn+20+d], label='SNR $j_{\perp,\phi}$, el=$35^\circ$')
+    N = datadict['el_all'].size
+    _az = datadict['az_all'][n*nn+d]
+    _el = datadict['el_all'][n*nn+d]
+    # _az = datadict['az_all'][N-nn]#[n*nn+d]
+    # _el = datadict['el_all'][N-nn]#[n*nn+d]    
+    s_str = 'SNR $j_{\perp,\phi}$, el=$%3.1f^\circ$, az=$%3.1f^\circ$' % (_el,_az)
+    ax3.plot(datadict['SNRe'][n*nn+d:n*nn+20+d], datadict['alt'][n*nn+d:n*nn+20+d], label=s_str)
+    # ax3.plot(datadict['SNRe'][N-nn:N-nn+20], datadict['alt'][N-nn:N-nn+20], label=s_str)
     ax3.plot(np.abs(1e5*datadict['jperpe'][n*nn+d:n*nn+20+d]), datadict['alt'][n*nn+d:n*nn+20+d], label='1e5*abs(GEMINI $j_{\perp,\phi}$)')
+    # ax3.plot(np.abs(1e5*datadict['jperpe'][N-nn:N-nn+20]), datadict['alt'][N-nn:N-nn+20], label='1e5*abs(GEMINI $j_{\perp,\phi}$)')
     ax3.legend(frameon=False)
     ax3.set_xlabel('SNR and 1e5 $j_{\perp,\phi}$')
     ax3.set_ylabel('Alt. [km]')

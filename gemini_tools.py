@@ -463,6 +463,10 @@ def sample_eiscat(xg, dat, dr = 1, az=None, el=None, sitelat=67.36, sitephi=23.,
         _az, _el = np.meshgrid(__az, __el, indexing='ij')
         az = _az.flatten()
         el = _el.flatten()
+        
+        # add a vertical beam
+        el = np.hstack((el,90))
+        az = np.hstack((az,0))
 
         # # Implement 27 beam (monostatic config) configuration as sketched by Ogawa (2021)
         # el1 = np.array([64,61,60,58,57,55,54,54,57,59,61,61])
@@ -486,6 +490,8 @@ def sample_eiscat(xg, dat, dr = 1, az=None, el=None, sitelat=67.36, sitephi=23.,
     lx = []
     ly = []
     lz = []
+    __el = []
+    __az = []
     
     # Find the intersection points of the beams and the given altitudes
     for i in range(len(az)):
@@ -506,6 +512,8 @@ def sample_eiscat(xg, dat, dr = 1, az=None, el=None, sitelat=67.36, sitephi=23.,
         r.append(r_)
         theta.append(theta_)
         phi.append(phi_)
+        __el.append(np.ones(r_.size)*el[i])
+        __az.append(np.ones(r_.size)*az[i])
     poss = np.vstack((np.array(r).flatten(), np.array(theta).flatten(),
                       np.array(phi).flatten())).T
     
@@ -526,7 +534,9 @@ def sample_eiscat(xg, dat, dr = 1, az=None, el=None, sitelat=67.36, sitephi=23.,
     # Initialize the datadict object
     datadict = {'lat':90-poss[:,1], 'lon':poss[:,2], 'alt':poss[:,0]-RE, 
                 'je':je, 'jn':jn, 'ju':ju, 'Be':Be, 'Bn':Bn, 'Bu':Bu, 
-                'az':np.array(az), 'el':np.array(el), 'alts':alt_grid}
+                'az':np.array(az), 'el':np.array(el), 'alts':alt_grid, 
+                'az_all':np.array(__az).flatten(), 
+                'el_all':np.array(__el).flatten()}
     
     # Here we add some additonal quantities
     datadict['vperpe'] = model2pointsgeogcoords(xg, dat['vperpe'], 

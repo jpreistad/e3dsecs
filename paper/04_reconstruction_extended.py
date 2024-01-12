@@ -35,15 +35,15 @@ inputmode =     'vi'    # How jperp is estimated. Must be either:
                         #   'jperp'         : Use jperp directly sampled from GEMINI
 l1_lompe        = 1e-2  # Regularization parameter for Lompe representation
 l2_lompe        = 1e-2  # Regularization parameter for Lompe representation
-l1              = 1e-2  # Regularization parameter for 3D reconstruction inversion
+l1              = 10**(-2.3)  # Regularization parameter for 3D reconstruction inversion
 intsec          = 5*60  # Integrationtime in seconds used in E3DOUBT
 factop          = True  # Provide values of vertical current at top of domain
-vert_profile    = None  # Regularize vertical Hall and Pedersen profile based on 
+vert_profile    = 150   # Regularize vertical Hall and Pedersen profile based on 
                         # GEMINI profile. None or # km from where it is applied above
 vert_dprofile   = False # Regularize vertical profile of gradient of H/P currents 
                         # based on electron density profile. NOT WORKING
-gcv             = False # Determine 3D model reg. parameter using GCV score
-overwrite       = True # Overwrites exisring 3D model coefficient file
+gcv             = True # Determine 3D model reg. parameter using cross-validation
+overwrite       = True  # Overwrites exisring 3D model coefficient file
 e3doubt_        = True  # Estimate sample (co)variances of ne and v with E3DOUBT
 addnoise        = True  # Adds noise to data based on the E3DOUBT variances
 diagnostic      = True  # Wheter to make diagnostic plots
@@ -90,7 +90,7 @@ el      = None       # If None, use default values
 sitelat = 67.7       # geo lat of transmitter. Skibotn: 69.39
 sitelon = 23.       # geo lon of transmitter. Skibotn: 20.27
 dlat = 69.39- sitelat
-dlon = 20.26 - sitelon
+dlon = 20.27 - sitelon
 lats0 = np.array([69.39, 68.44, 68.37])
 lons0 = np.array([20.26, 22.48, 19.10])
 lats = np.array([sitelat, lats0[1]-dlat, lats0[2]-dlat])
@@ -219,7 +219,7 @@ if diagnostic:
                                 clim=clim, single=4, gif=False, inputmode=inputmode)
     fig.savefig('./plots/3d_reconstruction_extended.pdf', dpi=250,bbox_inches='tight')
     
-    e3dsecs.diagnostics.model_amplitude_analysis(grid,alts_grid, m[1*K*I*J:2*K*I*J], clim=1e-1, 
+    e3dsecs.diagnostics.model_amplitude_analysis(grid,alts_grid, m[1*K*I*J:2*K*I*J], clim=0.5, 
                                          dipoleB=False, k=20)    
     
     ##############

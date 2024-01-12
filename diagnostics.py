@@ -221,7 +221,7 @@ def compare_potentials(dat, grid, alts_grid, datadict, inside, model, dipole_lom
     fig.savefig('./plots/uniform_sampling_slices/potential-comparison.png', dpi=250)
     
     
-def plot_analysis_grid(datadict, grid, alts_grid, lat_ev, lon_ev, alt_ev, dipole_lompe=True, 
+def plot_analysis_grid(datadict, grid, alts_grid, lat_ev, lon_ev, alt_ev, dipole_lompe=False, 
                        data=True, eiscat=True, _d=400, boxgrid=False, q='fac', clim=2e-5, 
                        cmap='bwr', diverging=True, ax=None):
     '''
@@ -647,7 +647,7 @@ def reconsrtruction_performance(datadict, grid, alts_grid, lat_ev, lon_ev, alt_e
 
 
 def scatterplot_reconstruction(grid, alts_grid, datadict, lon, lat, alt, full_j, jpar, 
-                               dipolekw=True, inout=False):
+                               dipolekw=False, inout=False):
     '''
     
 
@@ -698,16 +698,17 @@ def scatterplot_reconstruction(grid, alts_grid, datadict, lon, lat, alt, full_j,
     m_theta = np.arcsin(np.sqrt((RE+alts_grid[0])/(RE+alt))*np.sin(mtheta_)) #sjekk - ok!
     m_mlon = mlon_
     if dipolekw:
+        ax.scatter(1e6*j_gm_enu[:,2],1e6*full_j[0:N], s=1, label='$\mathbf{j}_r$', color='C0')
         inside = grid.ingrid(np.degrees(m_mlon), 90-np.degrees(m_theta), ext_factor=-2)
         ax.scatter(-1e6*j_gm_enu[:,1],1e6*full_j[N:2*N], s=1, label='$\mathbf{j}_\\theta$', color='C1')
         ax.scatter(1e6*j_gm_enu[:,0],1e6*full_j[2*N:3*N], s=1, label='$\mathbf{j}_\phi$', color='C2')
-        ax.scatter(1e6*j_gm_enu[:,2],1e6*full_j[0:N], s=1, label='$\mathbf{j}_r$', color='C0')
     else:    
         m_glon, m_glat = convert.geomag2geog(m_mlon, m_theta)
         inside = grid.ingrid(m_glon, m_glat, ext_factor=-2)
+        ax.scatter(1e6*datadict['ju'],1e6*full_j[0:N], s=1, label='$\mathbf{j}_r$', color='C0')
         ax.scatter(-1e6*datadict['jn'],1e6*full_j[N:2*N], s=1, label='$\mathbf{j}_\\theta$', color='C1')
         ax.scatter(1e6*datadict['je'],1e6*full_j[2*N:3*N], s=1, label='$\mathbf{j}_\phi$', color='C2')
-        ax.scatter(1e6*datadict['ju'],1e6*full_j[0:N], s=1, label='$\mathbf{j}_r$', color='C0')
+        
     highalt = alt > 200
     ax.scatter(1e6*datadict['fac'][highalt],1e6*jpar[highalt], s=1, label='FAC>200km', color='C3')
     if inout:
