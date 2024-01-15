@@ -189,6 +189,8 @@ def add_noise(ddict, minalt, alternative = True):
 
     '''
     
+    print('TODO: Add noise also to electron density')
+    
     N = ddict['lat'].size
 
     # Arrays to hold the result

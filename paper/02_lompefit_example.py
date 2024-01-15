@@ -150,7 +150,7 @@ clim=2e-5
 levels = np.arange(-29000,-5000,3000)
 ax.contour(lmodel.grid_E.xi, lmodel.grid_E.eta, datadict['Phitop'].reshape(shape), 
            colors='black', levels=levels)
-levels = np.linspace(-clim,clim,10)
+levels = np.linspace(-clim,clim,100)
 ax.contourf(lmodel.grid_E.xi, lmodel.grid_E.eta, -datadict['fac'].reshape(shape), 
             cmap='bwr', levels=levels, extend='both')
 xi_corners = [grid_l.xi_mesh[0,extend],grid_l.xi_mesh[0,-extend-1],
@@ -162,11 +162,16 @@ ax.plot(xi_corners, eta_corners, color='green')
 ax.set_title('Electric potential and FAC in GEMINI')
 # Latitude contours
 levels = [62,64,66]
+levels_gg = [66,68,70]
 phi, theta = geog2geomag(datadict['lon'], datadict['lat'])
 lat = 90-np.degrees(theta)
 cc = ax.contour(lmodel.grid_E.xi, lmodel.grid_E.eta, lat.reshape(shape), 
            levels=levels, colors='grey', zorder=1000, linewidths=0.5)
 labels = ax.clabel(cc, inline=True, fontsize=8, colors='k', fmt='%2i$^\circ$')
+cc2 = ax.contour(lmodel.grid_E.xi, lmodel.grid_E.eta, datadict['lat'].reshape(shape), 
+           levels=levels_gg, colors='grey', zorder=1000, linewidths=0.5, alpha=0.3)
+labels = ax.clabel(cc2, inline=True, fontsize=8, colors='k', fmt='%2i$^\circ$')
+
 #Colorbar
 cbarax = plt.subplot2grid((20,21), (2, 20), rowspan = 16, colspan = 1)
 cmap = plt.cm.bwr
