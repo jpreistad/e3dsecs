@@ -45,7 +45,7 @@ inputmode       = 'vi'  # How jperp is estimated. Must be either:
 # path = "/Users/jone/BCSS-DAG Dropbox/Data/E3D_GEMINI_paper/" # Adjust to fit your system
 path = '/Users/jone/Documents/uib_lagacy/gemini_output/'
 try: # look for saved file including some of the needed types of data    
-    dat = xr.open_dataset(path + 'gemini_datset.nc')
+    dat = xr.open_dataset(path + 'gemini_dataset.nc')
     xg = np.load(path + 'gemini_grid.npy', allow_pickle=True).item()
 except: # make the datafiles from reading GEMINI output
     xg, dat = e3dsecs.gemini_tools.read_gemini(path, timeindex=-1, maph=maph)

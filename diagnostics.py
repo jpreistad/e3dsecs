@@ -12,26 +12,17 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 from gemini3d.grid.convert import geomag2geog, geog2geomag
-import sys
-sys.path.append('/Users/jone/BCSS-DAG Dropbox/Jone Reistad/git/DAG/src')
-from pysymmetry.utils.spherical import sph_to_car, car_to_sph
 from secsy import cubedsphere
 import gemini3d.read as read
 from gemini3d.grid.gridmodeldata import geog2dipole
 import scipy
 import matplotlib
-try:
-    from . import secs3d
-    from . import visualization
-    from . import gemini_tools
-except:
-    import secs3d
-    import visualization
-    import gemini_tools
 
-
-RE = 6371.2 #Earth radius in km
-
+from . import secs3d
+from . import visualization
+from . import gemini_tools
+from . import coordinates
+RE = gemini_tools.RE
 
 
 def compare_input_jperp(datadict, jjj2, inside, savesuff, secs_grid, alts_grid, 
@@ -298,7 +289,7 @@ def plot_analysis_grid(datadict, grid, alts_grid, lat_ev, lon_ev, alt_ev, dipole
     #     visualization.plot_field_line(ax, lat_ev[0,-1,kk], lon_ev[0,-1,kk], 
     #                               alts__, color='orange', **kwargs, dipole=True)
     if data:
-        x, y, z = sph_to_car((RE+datadict['alt'].flatten(), 90-datadict['lat'].flatten(), 
+        x, y, z = coordinates.sph_to_car((RE+datadict['alt'].flatten(), 90-datadict['lat'].flatten(), 
                               datadict['lon'].flatten()), deg=True)
 
         if eiscat:
@@ -321,9 +312,9 @@ def plot_analysis_grid(datadict, grid, alts_grid, lat_ev, lon_ev, alt_ev, dipole
                                 # facecolors=cmap(norm(np.ones(sh)[:,:,sh[2]//2]*1e-6)),cmap=cmap)
     if dipole_lompe:
         lon_, lat_ = geomag2geog(np.radians(grid.projection.position[0]), np.pi/2 - np.radians(grid.projection.position[1])) # returns in degrees
-        x0, y0, z0 = sph_to_car((RE+0, 90-lat_, lon_), deg=True)
+        x0, y0, z0 = coordinates.sph_to_car((RE+0, 90-lat_, lon_), deg=True)
     else:
-        x0, y0, z0 = sph_to_car((RE+0, 90-grid.projection.position[1], grid.projection.position[0]), deg=True)
+        x0, y0, z0 = coordinates.sph_to_car((RE+0, 90-grid.projection.position[1], grid.projection.position[0]), deg=True)
     range_ =  alts_grid[-1]*0.3
     
     # if eiscatfov:
@@ -510,7 +501,7 @@ def reconsrtruction_performance(datadict, grid, alts_grid, lat_ev, lon_ev, alt_e
             for kk in range(lat_ev[0,-1,:].size):
                 visualization.plot_field_line(ax, lat_ev[0,-1,kk], lon_ev[0,-1,kk], 
                                           alts_grid, color='orange', **kwargs, dipoleB=dipolekw)
-            x, y, z = sph_to_car((RE+alt_ev.flatten(), 90-lat_ev.flatten(), 
+            x, y, z = coordinates.sph_to_car((RE+alt_ev.flatten(), 90-lat_ev.flatten(), 
                                   lon_ev.flatten()), deg=True)
             if cut=='k':
                 p = ax.plot_surface(x.reshape(shape)[ttt,:,:], y.reshape(shape)[ttt,:,:], 
@@ -529,9 +520,9 @@ def reconsrtruction_performance(datadict, grid, alts_grid, lat_ev, lon_ev, alt_e
                                     rcount = np.max(shape), ccount = np.max(shape),cmap=cmap)
             if dipolekw:
                 lon_, lat_ = geomag2geog(np.radians(grid.projection.position[0]), np.pi/2 - np.radians(grid.projection.position[1])) # returns in degrees
-                x0, y0, z0 = sph_to_car((RE+0, 90-lat_, lon_), deg=True)
+                x0, y0, z0 = coordinates.sph_to_car((RE+0, 90-lat_, lon_), deg=True)
             else:
-                x0, y0, z0 = sph_to_car((RE+0, 90-grid.projection.position[1], grid.projection.position[0]), deg=True)
+                x0, y0, z0 = coordinates.sph_to_car((RE+0, 90-grid.projection.position[1], grid.projection.position[0]), deg=True)
             range_ =  alts_grid[-1]*0.3
             ax.set_xlim(x0-range_, x0+range_)
             ax.set_ylim(y0-range_, y0+range_)
@@ -539,7 +530,7 @@ def reconsrtruction_performance(datadict, grid, alts_grid, lat_ev, lon_ev, alt_e
             ax.set_title(plot_titles[pp], fontsize=16)
             
             if pp==2:
-                x_, y_, z_ = sph_to_car((RE+0, 90-74, 37), deg=True)
+                x_, y_, z_ = coordinates.sph_to_car((RE+0, 90-74, 37), deg=True)
                 ax.text(x_[0], y_[0], z_[0], 'GEMINI', fontsize=16)
         
         # Lower row is the reconstruction
@@ -558,7 +549,7 @@ def reconsrtruction_performance(datadict, grid, alts_grid, lat_ev, lon_ev, alt_e
             #                 color='orange', **kwargs, dipole=True)
                 # visualization.plot_field_line(ax, lat_ev[0,8,kk], lon_ev[0,8,kk], 
                                           # alts__)
-            x, y, z = sph_to_car((RE+alt_ev.flatten(), 90-lat_ev.flatten(), 
+            x, y, z = coordinates.sph_to_car((RE+alt_ev.flatten(), 90-lat_ev.flatten(), 
                                   lon_ev.flatten()), deg=True)
             # p = ax2.plot_surface(x.reshape(shape)[kkk,:,:], y.reshape(shape)[kkk,:,:], 
             #                     z.reshape(shape)[kkk,:,:], alpha=0.5,
@@ -589,9 +580,9 @@ def reconsrtruction_performance(datadict, grid, alts_grid, lat_ev, lon_ev, alt_e
                                     facecolors=cmap(norm((ppp).reshape(shape)[:,:,ttt])), cmap=cmap)
             if dipolekw:
                 lon_, lat_ = geomag2geog(np.radians(grid.projection.position[0]), np.pi/2 - np.radians(grid.projection.position[1])) # returns in degrees
-                x0, y0, z0 = sph_to_car((RE+0, 90-lat_, lon_), deg=True)
+                x0, y0, z0 = coordinates.sph_to_car((RE+0, 90-lat_, lon_), deg=True)
             else:
-                x0, y0, z0 = sph_to_car((RE+0, 90-grid.projection.position[1], grid.projection.position[0]), deg=True)
+                x0, y0, z0 = coordinates.sph_to_car((RE+0, 90-grid.projection.position[1], grid.projection.position[0]), deg=True)
             range_ =  alts_grid[-1]*0.3
             ax.set_xlim(x0-range_, x0+range_)
             ax.set_ylim(y0-range_, y0+range_)
@@ -599,7 +590,7 @@ def reconsrtruction_performance(datadict, grid, alts_grid, lat_ev, lon_ev, alt_e
             ax.set_title(plot_titles[pp], fontsize=16)
             
             if pp==2:
-                x_, y_, z_ = sph_to_car((RE+0, 90-74, 37), deg=True)
+                x_, y_, z_ = coordinates.sph_to_car((RE+0, 90-74, 37), deg=True)
                 ax.text(x_[0], y_[0], z_[0], '3D reconstruction', fontsize=16)        
         # Colorbar
         cbarax = plt.subplot2grid((20,32), (5, 31), rowspan = 10, colspan = 1)
@@ -909,7 +900,7 @@ def snr_output_plot(covar_j, meshgrid, datadict, grid, alts_grid, Cmpost, clim=2
         ax2 = visualization.field_aligned_grid(ax2, grid, alts_grid, color='green', dipoleB=False, **kwargs)
         ax2.set_title(plot_titles2[pp], fontsize=16)
         if pp==2:
-            x_, y_, z_ = sph_to_car((RE+0, 90-74, 37), deg=True)
+            x_, y_, z_ = coordinates.sph_to_car((RE+0, 90-74, 37), deg=True)
             ax.text(x_[0], y_[0], z_[0], 'Uncertainty', fontsize=16)
             ax2.text(x_[0], y_[0], z_[0], 'SNR', fontsize=16)
         if type(cut) == str:
@@ -925,13 +916,13 @@ def snr_output_plot(covar_j, meshgrid, datadict, grid, alts_grid, Cmpost, clim=2
                 alts = np.ones(3)*0.01
                 glats = np.array([receivers[0][1], receivers[1][1], receivers[2][1]])
                 glons = np.array([receivers[0][2], receivers[1][2], receivers[2][2]])
-                x_, y_, z_ = sph_to_car((RE+alts, 90-glats, glons), deg=True)
+                x_, y_, z_ = coordinates.sph_to_car((RE+alts, 90-glats, glons), deg=True)
                 ax.scatter(x_, y_, z_, marker='*', c=['C0', 'C2', 'C1'])
                 ax2.scatter(x_, y_, z_, marker='*', c=['C0', 'C2', 'C1'])
                 if (c=='k') & (pp==2):
                     alt = int(alt_ev[ind[ii],0,0])
                     # glon, glat = geomag2geog(np.radians(grid.lon[-1,0]), np.radians(90-grid.lat[-1,0]))
-                    x_, y_, z_ = sph_to_car((RE+alt, 90-grid.lat[-1,0]-0.4, grid.lon[-1,0]), deg=True)
+                    x_, y_, z_ = coordinates.sph_to_car((RE+alt, 90-grid.lat[-1,0]-0.4, grid.lon[-1,0]), deg=True)
                     ax.text(x_[0], y_[0], z_[0], str(alt)+' km', fontsize=10)
                     ax2.text(x_[0], y_[0], z_[0], str(alt)+' km', fontsize=10)
                     

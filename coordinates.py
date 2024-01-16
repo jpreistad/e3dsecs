@@ -11,16 +11,11 @@ estimating 3D current densities, but not directly linked to the GEMINI grid.
 
 """
 
-# from gemini3d.grid.convert import unitvecs_geographic
 import numpy as np
-# from gemini3d.grid.gridmodeldata import model2geogcoords, model2pointsgeogcoords, geog2dipole
 from gemini3d.grid.convert import geog2geomag
 import gemini3d.grid.convert as convert
-try:
-    from . import gemini_tools
-except:
-    import gemini_tools
 
+from . import gemini_tools
 RE = gemini_tools.RE
 
 
@@ -388,3 +383,32 @@ def enu2gemini_rot(lon, lat, geographic = True):
     return Gs
 
 
+def sph_to_car(sph, deg = True):
+    """ convert from spherical to cartesian coordinates
+
+        input: 3 X N array:
+           [r1    , r2    , ..., rN    ]
+           [colat1, colat2, ..., colatN]
+           [lon1  , lon2  , ..., lonN  ]
+
+        output: 3 X N array:
+           [x1, x2, ... xN]
+           [y1, y2, ... yN]
+           [z1, z2, ... zN]
+
+        deg = True if lat and lon are given in degrees, 
+              False if radians
+    """
+    d2r = np.pi/180
+
+    r, theta, phi = sph
+
+    if deg == False:
+        conv = 1.
+    else:
+        conv = d2r
+
+
+    return np.vstack((r * np.sin(theta * conv) * np.cos(phi * conv), 
+                      r * np.sin(theta * conv) * np.sin(phi * conv), 
+                      r * np.cos(theta * conv)))

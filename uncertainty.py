@@ -18,16 +18,9 @@ import dipole
 import scipy
 from scipy.stats import multivariate_normal
 
-try:
-    from . import gemini_tools
-    from . import coordinates
-    RE = gemini_tools.RE
-
-except:
-    from gemini_tools import RE as RE
-    import coordinates
-
-# RE = 6371.2 #Earth radius in km
+from . import gemini_tools
+from . import coordinates
+RE = gemini_tools.RE
 
 
 def get_datacov_e3doubt(ddict, intsec = 5*60, transmitter=('ski_mod', 67.2,23.7), 

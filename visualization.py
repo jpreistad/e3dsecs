@@ -12,21 +12,16 @@ using GEMINI output.
 import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib as mpl
-import cartopy.io.shapereader as shpreader
-from pysymmetry.utils.spherical import sph_to_car, car_to_sph
-# from gemini_tools import RE
 import apexpy
 import matplotlib
 import polplot
 from gemini3d.grid.convert import geomag2geog
 from gemini3d.grid import convert
-
-try:
-    from . import gemini_tools
-except:
-    import gemini_tools
 import imageio
-RE = 6371.2 #Earth radius in km
+
+from . import coordinates
+from . import gemini_tools
+RE = gemini_tools.RE
 
 
 def fixed_alt(data, shape = None, crange=(-20,20), cbartitle='Arb.', **kwargs):
@@ -186,7 +181,7 @@ def plot_field_aligned_segment(ax, mlon, mlat, alts_grid, color='green', **kwarg
     # alts = np.linspace(0,500, 20)
     for alt in alts_grid:
         glat_, glon_, e = apex.apex2geo(mlat, mlon, alt)
-        x,y,z = sph_to_car((RE+alt, 90-glat_, glon_), deg=True)
+        x,y,z = coordinates.sph_to_car((RE+alt, 90-glat_, glon_), deg=True)
         xs.append(x[0])
         ys.append(y[0])
         zs.append(z[0])
@@ -200,7 +195,7 @@ def plot_hor_segment(ax, mlons, mlats, alt, color='green', dipoleB=False, **kwar
         glon_, glat_ = geomag2geog(np.radians(mlons), np.pi/2 - np.radians(mlats)) # returns in degrees
         # apex = apexpy.Apex(2022)
         # glat_, glon_, e = apex.apex2geo(mlats, mlons, alt)
-    x,y,z = sph_to_car((RE+alt, 90-glat_, glon_), deg=True)
+    x,y,z = coordinates.sph_to_car((RE+alt, 90-glat_, glon_), deg=True)
     ax.plot(x,y,z, color=color, **kwargs)
 
 
@@ -241,7 +236,7 @@ def field_aligned_grid(ax, grid, alts_grid, color='green', showlayers=False,
         lat_ = pos[1] # in degrees
         lon_ = pos[0] # in degrees
     # site_mlat, site_mlon = apex.geo2apex(lat_, lon_, 0*0.001)
-    x_, y_, z_ = sph_to_car((RE, 90-lat_, lon_), deg=True)
+    x_, y_, z_ = coordinates.sph_to_car((RE, 90-lat_, lon_), deg=True)
     xlim = (x_[0]-L-10*Lres, x_[0]+L+10*Lres) 
     ylim = (y_[0]-L-10*Lres, y_[0]+L+10*Lres) 
     zlim = (RE, RE+alts_grid[-1]+1)
@@ -252,7 +247,7 @@ def field_aligned_grid(ax, grid, alts_grid, color='green', showlayers=False,
     coastlines = np.load(datapath + 'coastlines_' + resolution + '.npz')
     for cl in coastlines:
         lat, lon = coastlines[cl]
-        x,y,z = sph_to_car((RE, 90-lat, lon), deg=True)
+        x,y,z = coordinates.sph_to_car((RE, 90-lat, lon), deg=True)
         use = (x > xlim[0]-L/2) & (x < xlim[1]+L/2) & (y > ylim[0]-L/2) & (y < ylim[1]+L/2) & (z > 0)
         ax.plot(x[use], y[use], z[use], color = 'C0', **kwargs)
         
@@ -281,7 +276,7 @@ def field_aligned_grid(ax, grid, alts_grid, color='green', showlayers=False,
         # else:
             # glat_,glon_, _ = apex.apex2geo(mlats0, mlons0, alts_grid[0])
         for lon, lat in get_grid_boundaries(glon_, glat_, grid.NL, grid.NW):
-            x,y,z = sph_to_car((RE+alts_grid[0], 90-lat, lon), deg=True)
+            x,y,z = coordinates.sph_to_car((RE+alts_grid[0], 90-lat, lon), deg=True)
             ax.plot(x, y, z, color = 'grey', linewidth = .4)   
     
     if showlayers:
@@ -298,7 +293,7 @@ def field_aligned_grid(ax, grid, alts_grid, color='green', showlayers=False,
             # mlats = np.vstack((mlats, mlat_[np.newaxis]))
             # mlons = np.vstack((mlons, mlon_[np.newaxis]))
             for lon, lat in get_grid_boundaries(glon_, glat_, grid.NL, grid.NW):
-                x,y,z = sph_to_car((RE+alt, 90-lat, lon), deg=True)
+                x,y,z = coordinates.sph_to_car((RE+alt, 90-lat, lon), deg=True)
                 ax.plot(x, y, z, color = 'grey', linewidth = .4)
         
 
@@ -324,20 +319,20 @@ def field_aligned_grid(ax, grid, alts_grid, color='green', showlayers=False,
     
     if verticalcorners:
         #alts_grid[0] should be the altitude of the base CS grid
-        x0,y0,z0 = sph_to_car((RE+alts_grid[0], 90-grid.lat_mesh[0,0], grid.lon_mesh[0,0]), deg=True)
-        x1,y1,z1 = sph_to_car((RE+alts_grid[-1], 90-grid.lat_mesh[0,0], grid.lon_mesh[0,0]), deg=True)
+        x0,y0,z0 = coordinates.sph_to_car((RE+alts_grid[0], 90-grid.lat_mesh[0,0], grid.lon_mesh[0,0]), deg=True)
+        x1,y1,z1 = coordinates.sph_to_car((RE+alts_grid[-1], 90-grid.lat_mesh[0,0], grid.lon_mesh[0,0]), deg=True)
         ax.plot([x0[0],x1[0]],[y0[0],y1[0]],[z0[0],z1[0]], color='black', linestyle='dotted')
         
-        x0,y0,z0 = sph_to_car((RE+alts_grid[0], 90-grid.lat_mesh[-1,0], grid.lon_mesh[-1,0]), deg=True)
-        x1,y1,z1 = sph_to_car((RE+alts_grid[-1], 90-grid.lat_mesh[-1,0], grid.lon_mesh[-1,0]), deg=True)
+        x0,y0,z0 = coordinates.sph_to_car((RE+alts_grid[0], 90-grid.lat_mesh[-1,0], grid.lon_mesh[-1,0]), deg=True)
+        x1,y1,z1 = coordinates.sph_to_car((RE+alts_grid[-1], 90-grid.lat_mesh[-1,0], grid.lon_mesh[-1,0]), deg=True)
         ax.plot([x0[0],x1[0]],[y0[0],y1[0]],[z0[0],z1[0]], color='black', linestyle='dotted')
 
-        x0,y0,z0 = sph_to_car((RE+alts_grid[0], 90-grid.lat_mesh[0,-1], grid.lon_mesh[0,-1]), deg=True)
-        x1,y1,z1 = sph_to_car((RE+alts_grid[-1], 90-grid.lat_mesh[0,-1], grid.lon_mesh[0,-1]), deg=True)
+        x0,y0,z0 = coordinates.sph_to_car((RE+alts_grid[0], 90-grid.lat_mesh[0,-1], grid.lon_mesh[0,-1]), deg=True)
+        x1,y1,z1 = coordinates.sph_to_car((RE+alts_grid[-1], 90-grid.lat_mesh[0,-1], grid.lon_mesh[0,-1]), deg=True)
         ax.plot([x0[0],x1[0]],[y0[0],y1[0]],[z0[0],z1[0]], color='black', linestyle='dotted')
 
-        x0,y0,z0 = sph_to_car((RE+alts_grid[0], 90-grid.lat_mesh[-1,-1], grid.lon_mesh[-1,-1]), deg=True)
-        x1,y1,z1 = sph_to_car((RE+alts_grid[-1], 90-grid.lat_mesh[-1,-1], grid.lon_mesh[-1,-1]), deg=True)
+        x0,y0,z0 = coordinates.sph_to_car((RE+alts_grid[0], 90-grid.lat_mesh[-1,-1], grid.lon_mesh[-1,-1]), deg=True)
+        x1,y1,z1 = coordinates.sph_to_car((RE+alts_grid[-1], 90-grid.lat_mesh[-1,-1], grid.lon_mesh[-1,-1]), deg=True)
         ax.plot([x0[0],x1[0]],[y0[0],y1[0]],[z0[0],z1[0]], color='black', linestyle='dotted')
     
     return ax
@@ -346,42 +341,42 @@ def spherical_grid(ax, lat_ev, lon_ev, alt_ev, color='red', maph=300):
     # lat_ev and lon_ev must be in geographic coords
     
     # Vertical lines
-    x,y,z = sph_to_car((RE+alt_ev[:,0,0], 90-lat_ev[:,0,0], lon_ev[:,0,0]), deg=True)
+    x,y,z = coordinates.sph_to_car((RE+alt_ev[:,0,0], 90-lat_ev[:,0,0], lon_ev[:,0,0]), deg=True)
     ax.plot(x,y,z, color=color)
-    x,y,z = sph_to_car((RE+alt_ev[:,-1,0], 90-lat_ev[:,-1,0], lon_ev[:,-1,0]), deg=True)
+    x,y,z = coordinates.sph_to_car((RE+alt_ev[:,-1,0], 90-lat_ev[:,-1,0], lon_ev[:,-1,0]), deg=True)
     ax.plot(x,y,z, color=color)
-    x,y,z = sph_to_car((RE+alt_ev[:,0,-1], 90-lat_ev[:,0,-1], lon_ev[:,0,-1]), deg=True)
+    x,y,z = coordinates.sph_to_car((RE+alt_ev[:,0,-1], 90-lat_ev[:,0,-1], lon_ev[:,0,-1]), deg=True)
     ax.plot(x,y,z, color=color)
-    x,y,z = sph_to_car((RE+alt_ev[:,-1,-1], 90-lat_ev[:,-1,-1], lon_ev[:,-1,-1]), deg=True)
+    x,y,z = coordinates.sph_to_car((RE+alt_ev[:,-1,-1], 90-lat_ev[:,-1,-1], lon_ev[:,-1,-1]), deg=True)
     ax.plot(x,y,z, color=color)
 
     #Horizontal lines
-    x,y,z = sph_to_car((RE+alt_ev[0,:,0], 90-lat_ev[0,:,0], lon_ev[0,:,0]), deg=True)
+    x,y,z = coordinates.sph_to_car((RE+alt_ev[0,:,0], 90-lat_ev[0,:,0], lon_ev[0,:,0]), deg=True)
     ax.plot(x,y,z, color=color)
-    x,y,z = sph_to_car((RE+alt_ev[0,:,-1], 90-lat_ev[0,:,-1], lon_ev[0,:,-1]), deg=True)
+    x,y,z = coordinates.sph_to_car((RE+alt_ev[0,:,-1], 90-lat_ev[0,:,-1], lon_ev[0,:,-1]), deg=True)
     ax.plot(x,y,z, color=color)
-    x,y,z = sph_to_car((RE+alt_ev[0,0,:], 90-lat_ev[0,0,:], lon_ev[0,0,:]), deg=True)
+    x,y,z = coordinates.sph_to_car((RE+alt_ev[0,0,:], 90-lat_ev[0,0,:], lon_ev[0,0,:]), deg=True)
     ax.plot(x,y,z, color=color)
-    x,y,z = sph_to_car((RE+alt_ev[0,-1,:], 90-lat_ev[0,-1,:], lon_ev[0,-1,:]), deg=True)
+    x,y,z = coordinates.sph_to_car((RE+alt_ev[0,-1,:], 90-lat_ev[0,-1,:], lon_ev[0,-1,:]), deg=True)
     ax.plot(x,y,z, color=color)
-    x,y,z = sph_to_car((RE+alt_ev[-1,:,0], 90-lat_ev[-1,:,0], lon_ev[-1,:,0]), deg=True)
+    x,y,z = coordinates.sph_to_car((RE+alt_ev[-1,:,0], 90-lat_ev[-1,:,0], lon_ev[-1,:,0]), deg=True)
     ax.plot(x,y,z, color=color)
-    x,y,z = sph_to_car((RE+alt_ev[-1,:,-1], 90-lat_ev[-1,:,-1], lon_ev[-1,:,-1]), deg=True)
+    x,y,z = coordinates.sph_to_car((RE+alt_ev[-1,:,-1], 90-lat_ev[-1,:,-1], lon_ev[-1,:,-1]), deg=True)
     ax.plot(x,y,z, color=color)
-    x,y,z = sph_to_car((RE+alt_ev[-1,0,:], 90-lat_ev[-1,0,:], lon_ev[-1,0,:]), deg=True)
+    x,y,z = coordinates.sph_to_car((RE+alt_ev[-1,0,:], 90-lat_ev[-1,0,:], lon_ev[-1,0,:]), deg=True)
     ax.plot(x,y,z, color=color)
-    x,y,z = sph_to_car((RE+alt_ev[-1,-1,:], 90-lat_ev[-1,-1,:], lon_ev[-1,-1,:]), deg=True)
+    x,y,z = coordinates.sph_to_car((RE+alt_ev[-1,-1,:], 90-lat_ev[-1,-1,:], lon_ev[-1,-1,:]), deg=True)
     ax.plot(x,y,z, color=color)
     
     # Horizontal layer where Lompe is used to represent E-field, using observations above this height
     closest_k = np.argmin(np.abs(alt_ev[:,0,0]-maph))
-    x,y,z = sph_to_car((RE+alt_ev[closest_k,0,:], 90-lat_ev[closest_k,0,:], lon_ev[closest_k,0,:]), deg=True)
+    x,y,z = coordinates.sph_to_car((RE+alt_ev[closest_k,0,:], 90-lat_ev[closest_k,0,:], lon_ev[closest_k,0,:]), deg=True)
     ax.plot(x,y,z, color=color, alpha=0.5)
-    x,y,z = sph_to_car((RE+alt_ev[closest_k,-1,:], 90-lat_ev[closest_k,-1,:], lon_ev[closest_k,-1,:]), deg=True)
+    x,y,z = coordinates.sph_to_car((RE+alt_ev[closest_k,-1,:], 90-lat_ev[closest_k,-1,:], lon_ev[closest_k,-1,:]), deg=True)
     ax.plot(x,y,z, color=color, alpha=0.5)
-    x,y,z = sph_to_car((RE+alt_ev[closest_k,:,0], 90-lat_ev[closest_k,:,0], lon_ev[closest_k,:,0]), deg=True)
+    x,y,z = coordinates.sph_to_car((RE+alt_ev[closest_k,:,0], 90-lat_ev[closest_k,:,0], lon_ev[closest_k,:,0]), deg=True)
     ax.plot(x,y,z, color=color, alpha=0.5)
-    x,y,z = sph_to_car((RE+alt_ev[closest_k,:,-1], 90-lat_ev[closest_k,:,-1], lon_ev[closest_k,:,-1]), deg=True)
+    x,y,z = coordinates.sph_to_car((RE+alt_ev[closest_k,:,-1], 90-lat_ev[closest_k,:,-1], lon_ev[closest_k,:,-1]), deg=True)
     ax.plot(x,y,z, color=color, alpha=0.5)
 
 def plot_e3dfov(ax, lat0, lon0, alt0, lat1, lon1, alt1, color='C1', **kwargs):
@@ -416,34 +411,34 @@ def plot_e3dfov(ax, lat0, lon0, alt0, lat1, lon1, alt1, color='C1', **kwargs):
     NNN = lat0.size
     for i in range(NNN-1):
         #Horizontal segmetn, bottom
-        x0,y0,z0 = sph_to_car((RE+alt0[i], 90-lat0[i], lon0[i]), deg=True)
-        x1,y1,z1 = sph_to_car((RE+alt0[i+1], 90-lat0[i+1], lon0[i+1]), deg=True)
+        x0,y0,z0 = coordinates.sph_to_car((RE+alt0[i], 90-lat0[i], lon0[i]), deg=True)
+        x1,y1,z1 = coordinates.sph_to_car((RE+alt0[i+1], 90-lat0[i+1], lon0[i+1]), deg=True)
         ax.plot([x0[0],x1[0]],[y0[0],y1[0]],[z0[0],z1[0]], color=color)
         
         #Horizontal segmetn, top
-        x0,y0,z0 = sph_to_car((RE+alt1[i], 90-lat1[i], lon1[i]), deg=True)
-        x1,y1,z1 = sph_to_car((RE+alt1[i+1], 90-lat1[i+1], lon1[i+1]), deg=True)
+        x0,y0,z0 = coordinates.sph_to_car((RE+alt1[i], 90-lat1[i], lon1[i]), deg=True)
+        x1,y1,z1 = coordinates.sph_to_car((RE+alt1[i+1], 90-lat1[i+1], lon1[i+1]), deg=True)
         ax.plot([x0[0],x1[0]],[y0[0],y1[0]],[z0[0],z1[0]], color=color)
 
         #Vertical segment
-        x0,y0,z0 = sph_to_car((RE+alt0[i], 90-lat0[i], lon0[i]), deg=True)
-        x1,y1,z1 = sph_to_car((RE+alt1[i], 90-lat1[i], lon1[i]), deg=True)
+        x0,y0,z0 = coordinates.sph_to_car((RE+alt0[i], 90-lat0[i], lon0[i]), deg=True)
+        x1,y1,z1 = coordinates.sph_to_car((RE+alt1[i], 90-lat1[i], lon1[i]), deg=True)
         ax.plot([x0[0],x1[0]],[y0[0],y1[0]],[z0[0],z1[0]], color=color, alpha=0.3)
 
     #Connecting last beam to fist beam
     #Horizontal segmetn, bottom
-    x0,y0,z0 = sph_to_car((RE+alt0[NNN-1], 90-lat0[NNN-1], lon0[NNN-1]), deg=True)
-    x1,y1,z1 = sph_to_car((RE+alt0[0], 90-lat0[0], lon0[0]), deg=True)
+    x0,y0,z0 = coordinates.sph_to_car((RE+alt0[NNN-1], 90-lat0[NNN-1], lon0[NNN-1]), deg=True)
+    x1,y1,z1 = coordinates.sph_to_car((RE+alt0[0], 90-lat0[0], lon0[0]), deg=True)
     ax.plot([x0[0],x1[0]],[y0[0],y1[0]],[z0[0],z1[0]], color=color)
 
     #Horizontal segmetn, top
-    x0,y0,z0 = sph_to_car((RE+alt1[NNN-1], 90-lat1[NNN-1], lon1[NNN-1]), deg=True)
-    x1,y1,z1 = sph_to_car((RE+alt1[0], 90-lat1[0], lon1[0]), deg=True)
+    x0,y0,z0 = coordinates.sph_to_car((RE+alt1[NNN-1], 90-lat1[NNN-1], lon1[NNN-1]), deg=True)
+    x1,y1,z1 = coordinates.sph_to_car((RE+alt1[0], 90-lat1[0], lon1[0]), deg=True)
     ax.plot([x0[0],x1[0]],[y0[0],y1[0]],[z0[0],z1[0]], color=color)
     
     #Vertical segment
-    x0,y0,z0 = sph_to_car((RE+alt0[NNN-1], 90-lat0[NNN-1], lon0[NNN-1]), deg=True)
-    x1,y1,z1 = sph_to_car((RE+alt1[NNN-1], 90-lat1[NNN-1], lon1[NNN-1]), deg=True)
+    x0,y0,z0 = coordinates.sph_to_car((RE+alt0[NNN-1], 90-lat0[NNN-1], lon0[NNN-1]), deg=True)
+    x1,y1,z1 = coordinates.sph_to_car((RE+alt1[NNN-1], 90-lat1[NNN-1], lon1[NNN-1]), deg=True)
     ax.plot([x0[0],x1[0]],[y0[0],y1[0]],[z0[0],z1[0]], color=color, alpha=0.3, **kwargs)
 
                 
@@ -457,7 +452,7 @@ def plot_field_line(ax, glat0, glon0, alts_grid, color='grey', dipoleB=False, **
         m_theta = np.arcsin(np.sqrt((RE+alts_grid)/(RE+alts_grid[0]))*np.sin(mtheta_))
         m_mlon = np.ones(alts_grid.size)*mlon_
         m_glon, m_glat = convert.geomag2geog(m_mlon, m_theta)
-        x,y,z = sph_to_car((RE+alts_grid, 90-m_glat, m_glon), deg=True)
+        x,y,z = coordinates.sph_to_car((RE+alts_grid, 90-m_glat, m_glon), deg=True)
         ax.plot(x,y,z, color=color, alpha=0.5, **kwargs)
 
     else:
@@ -468,7 +463,7 @@ def plot_field_line(ax, glat0, glon0, alts_grid, color='grey', dipoleB=False, **
         zs = []
         for alt in alts_grid:
             glat_, glon_, e = apex.apex2geo(mlat0, mlon0, alt)
-            x,y,z = sph_to_car((RE+alt, 90-glat_, glon_), deg=True)
+            x,y,z = coordinates.sph_to_car((RE+alt, 90-glat_, glon_), deg=True)
             xs.append(x[0])
             ys.append(y[0])
             zs.append(z[0])
@@ -537,7 +532,7 @@ def plot_resolution(ax, grid, alts_grid, kij, psf, az=-26, el=7, clim=1e-6,
             if dipoleB:
                 lon_, lat_ = geomag2geog(np.radians(lon_), np.pi/2 - np.radians(lat_))
             sh = lon_.shape
-            x, y, z = sph_to_car((RE+alt_.flatten(), 90-lat_.flatten(), 
+            x, y, z = coordinates.sph_to_car((RE+alt_.flatten(), 90-lat_.flatten(), 
                                   lon_.flatten()), deg=True)
             p = ax.plot_surface(x.reshape(sh)[k,:,:], y.reshape(sh)[k,:,:], 
                                 z.reshape(sh)[k,:,:], alpha=alpha, zorder=1,
@@ -551,7 +546,7 @@ def plot_resolution(ax, grid, alts_grid, kij, psf, az=-26, el=7, clim=1e-6,
             if dipoleB:
                 lon_, lat_ = geomag2geog(np.radians(lon_), np.pi/2 - np.radians(lat_))
             sh = lon_.shape
-            x, y, z = sph_to_car((RE+alt_.flatten(), 90-lat_.flatten(), 
+            x, y, z = coordinates.sph_to_car((RE+alt_.flatten(), 90-lat_.flatten(), 
                                   lon_.flatten()), deg=True)        
             p = ax.plot_surface(x.reshape(sh)[:,i,:], y.reshape(sh)[:,i,:], 
                                 z.reshape(sh)[:,i,:], alpha=alpha, zorder=3,
@@ -565,7 +560,7 @@ def plot_resolution(ax, grid, alts_grid, kij, psf, az=-26, el=7, clim=1e-6,
             if dipoleB:
                 lon_, lat_ = geomag2geog(np.radians(lon_), np.pi/2 - np.radians(lat_))
             sh = lon_.shape
-            x, y, z = sph_to_car((RE+alt_.flatten(), 90-lat_.flatten(), 
+            x, y, z = coordinates.sph_to_car((RE+alt_.flatten(), 90-lat_.flatten(), 
                                   lon_.flatten()), deg=True)
             p = ax.plot_surface(x.reshape(sh)[:,:,j], y.reshape(sh)[:,:,j], 
                             z.reshape(sh)[:,:,j], alpha=alpha, zorder=2,
@@ -575,7 +570,7 @@ def plot_resolution(ax, grid, alts_grid, kij, psf, az=-26, el=7, clim=1e-6,
         lat0 = grid.lat[i,j]
         if dipoleB:
             lon0, lat0 = geomag2geog(np.radians(lon0), np.pi/2 - np.radians(lat0))
-        x0, y0, z0 = sph_to_car((RE+alt0, 90-lat0, lon0), deg=True)
+        x0, y0, z0 = coordinates.sph_to_car((RE+alt0, 90-lat0, lon0), deg=True)
         ax.scatter(x0, y0, z0, s=50, marker='*', color='green')
         
         #Field lines
@@ -589,7 +584,7 @@ def plot_resolution(ax, grid, alts_grid, kij, psf, az=-26, el=7, clim=1e-6,
         else:
             lat0 = grid.projection.position[1]
             lon0 = grid.projection.position[0]
-        x0, y0, z0 = sph_to_car((RE+0, 90-lat0, lon0), deg=True)
+        x0, y0, z0 = coordinates.sph_to_car((RE+0, 90-lat0, lon0), deg=True)
         range_ =  alts_grid[-1]*range_p
         ax.set_xlim(x0-range_, x0+range_)
         ax.set_ylim(y0-range_, y0+range_)
@@ -638,7 +633,7 @@ def plot_slice(ax, grid, alts_grid, lat, lon, alt, data, clim = 5e-5, azim=-20,
     for kk in range(lat[0,-1,:].size):
         plot_field_line(ax, lat[0,-1,kk], lon[0,-1,kk], 
                                   alts__, color='orange', **kwargs, dipoleB=True)
-    x, y, z = sph_to_car((RE+alt.flatten(), 90-lat.flatten(), 
+    x, y, z = coordinates.sph_to_car((RE+alt.flatten(), 90-lat.flatten(), 
                           lon.flatten()), deg=True)
     if dim == 0:
         p = ax.plot_surface(x.reshape(shape)[sliceindex,:,:], y.reshape(shape)[sliceindex,:,:], 
@@ -648,7 +643,7 @@ def plot_slice(ax, grid, alts_grid, lat, lon, alt, data, clim = 5e-5, azim=-20,
         if maph is not None:
             N = shape[1]
             intmin = np.argmin(np.abs(maph - alt[:,0,0]))
-            x, y, z = sph_to_car((RE+np.ones(N)*maph, 90-lat[intmin,:,sliceindex], 
+            x, y, z = coordinates.sph_to_car((RE+np.ones(N)*maph, 90-lat[intmin,:,sliceindex], 
                                   lon[intmin,:,sliceindex]), deg=True)
             ax.plot(x, y, z, color='black')
     elif dim == 1:
@@ -659,7 +654,7 @@ def plot_slice(ax, grid, alts_grid, lat, lon, alt, data, clim = 5e-5, azim=-20,
         if maph is not None:
             N = shape[2]
             intmin = np.argmin(np.abs(maph - alt[:,0,0]))
-            x, y, z = sph_to_car((RE+np.ones(N)*maph, 90-lat[intmin,sliceindex,:], 
+            x, y, z = coordinates.sph_to_car((RE+np.ones(N)*maph, 90-lat[intmin,sliceindex,:], 
                                   lon[intmin,sliceindex,:]), deg=True)
             ax.plot(x, y, z, color='black', linewidth=3, alpha=1)
     elif dim == 2:
@@ -670,14 +665,14 @@ def plot_slice(ax, grid, alts_grid, lat, lon, alt, data, clim = 5e-5, azim=-20,
         if maph is not None:
             N = shape[1]
             intmin = np.argmin(np.abs(maph - alt[:,0,0]))
-            x, y, z = sph_to_car((RE+np.ones(N)*maph, 90-lat[intmin,:,sliceindex], 
+            x, y, z = coordinates.sph_to_car((RE+np.ones(N)*maph, 90-lat[intmin,:,sliceindex], 
                                   lon[intmin,:, sliceindex]), deg=True)
             ax.plot(x, y, z, color='black', linewidth=3, alpha=1)        
     if dipole_lompe:
         lon_, lat_ = geomag2geog(np.radians(grid.projection.position[0]), np.pi/2 - np.radians(grid.projection.position[1])) # returns in degrees
-        x0, y0, z0 = sph_to_car((RE+0, 90-lat_, lon_), deg=True)
+        x0, y0, z0 = coordinates.sph_to_car((RE+0, 90-lat_, lon_), deg=True)
     else:
-        x0, y0, z0 = sph_to_car((RE+0, 90-grid.projection.position[1], grid.projection.position[0]), deg=True)
+        x0, y0, z0 = coordinates.sph_to_car((RE+0, 90-grid.projection.position[1], grid.projection.position[0]), deg=True)
     range_ =  alts__[-1]*0.3
     ax.set_xlim(x0-range_, x0+range_)
     ax.set_ylim(y0-range_, y0+range_)
@@ -742,7 +737,7 @@ def plotslice(ax, meshgrid, q, cut='k', ind=0, clim=1e-5, cmap='bwr', diverging=
     lon_ev = meshgrid[2]
     shape = lat_ev.shape
         
-    x, y, z = sph_to_car((RE+alt_ev.flatten(), 90-lat_ev.flatten(), lon_ev.flatten()), deg=True)
+    x, y, z = coordinates.sph_to_car((RE+alt_ev.flatten(), 90-lat_ev.flatten(), lon_ev.flatten()), deg=True)
     if cut=='k':
         p = ax.plot_surface(x.reshape(shape)[ind,:,:], y.reshape(shape)[ind,:,:], 
                             z.reshape(shape)[ind,:,:], alpha=0.5,
@@ -759,7 +754,7 @@ def plotslice(ax, meshgrid, q, cut='k', ind=0, clim=1e-5, cmap='bwr', diverging=
                             facecolors=cmap(norm(q[:,:,ind])), linewidth=0.1, 
                             rcount = np.max(shape), ccount = np.max(shape),cmap=cmap)    
 
-    x0, y0, z0 = sph_to_car((RE+0, 90-lat_ev[0,shape[1]//2,shape[2]//2], lon_ev[0,shape[1]//2,shape[2]//2]), deg=True)
+    x0, y0, z0 = coordinates.sph_to_car((RE+0, 90-lat_ev[0,shape[1]//2,shape[2]//2], lon_ev[0,shape[1]//2,shape[2]//2]), deg=True)
 
     range_ =  alt_ev[-1,0,0]*0.3
     ax.set_xlim(x0[0]-range_, x0[0]+range_)

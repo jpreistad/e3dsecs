@@ -26,17 +26,10 @@ import pandas as pd
 import scipy
 import matplotlib.pyplot as plt
 
-try:
-    from . import gemini_tools
-    RE = gemini_tools.RE
-    from . import diagnostics
-    from . import coordinates
-
-except:
-    import gemini_tools
-    import diagnostics
-    import coordinates
-    from gemini_tools import RE as RE
+from . import gemini_tools
+RE = gemini_tools.RE
+from . import diagnostics
+from . import coordinates
 
 
 def get_alt_index(alts_grid, alt, returnfloat=False):

@@ -28,16 +28,9 @@ import matplotlib.pyplot as plt
 
 RE = 6371.2 #Earth radius in km
 
-try:
-    # from . import visualization
-    from . import secs3d
-    from . import coordinates
-    from . import uncertainty
-except:
-    # import visualization
-    import secs3d
-    import coordinates
-    import uncertainty
+from . import secs3d
+from . import coordinates
+from . import uncertainty
 
 
 def read_gemini(path, timeindex=-1, maph=200):

@@ -11,20 +11,13 @@ Make a figure of an example of a 3D grid
 
 
 import sys
-sys.path.append('/Users/jone/BCSS-DAG Dropbox/Jone Reistad/git/DAG/src')
 sys.path.append('/Users/jone/BCSS-DAG Dropbox/Jone Reistad')
 import git.e3dsecs as e3dsecs
 import numpy as np
-import apexpy
-from gemini3d.grid.convert import geomag2geog, geog2geomag
+from gemini3d.grid.convert import geomag2geog
 import gemini3d.read as read
 import xarray as xr
-import time
-import lompe
 import matplotlib.pyplot as plt
-import secsy as cs
-from pysymmetry.utils.spherical import sph_to_car, car_to_sph
-
 
 #######################
 # Set global attributes and variables
@@ -103,7 +96,7 @@ Lres = grid.Lres*1e-3
 pos = grid.projection.position
 if dipole_lompe:
     lons, lats = geomag2geog(np.radians(lats), np.pi/2 - np.radians(lons)) # returns in degrees
-x_, y_, z_ = sph_to_car((RE+alts, 90-lats, lons), deg=True)
+x_, y_, z_ = e3dsecs.coordinates.sph_to_car((RE+alts, 90-lats, lons), deg=True)
 ax.plot(x_, y_, z_, color='black')
 for (ii,aa) in enumerate(alts):
     ax.text(x_[ii], y_[ii], z_[ii], str(aa)+' km', ha='right')
@@ -113,7 +106,7 @@ lats = np.hstack((grid.lat_mesh[:,-1],grid.lat_mesh[-1,:],grid.lat_mesh[:,0][::-
 lons = np.hstack((grid.lon_mesh[:,-1],grid.lon_mesh[-1,:],grid.lon_mesh[:,0][::-1],grid.lon_mesh[0,:]))
 if dipole_lompe:
     lons, lats = geomag2geog(np.radians(lats), np.pi/2 - np.radians(lons)) # returns in degrees
-x_, y_, z_ = sph_to_car((RE+0, 90-lats, lons), deg=True)
+x_, y_, z_ = e3dsecs.coordinates.sph_to_car((RE+0, 90-lats, lons), deg=True)
 ax.plot(x_, y_, z_, '--', color='black')
 
 # Add E3D sites
@@ -128,7 +121,7 @@ lons = np.array([sitelon, lons0[1]-dlon, lons0[2]-dlon])
 alts = np.array([0,0,0])
 # sites = ['Skibotn', 'Karesuando', 'Kaiseniemi']
 sites = ['Tx/Rx1', 'Rx2', 'Rx3']
-x, y, z = sph_to_car((RE+alts, 90-lats, lons), deg=True)
+x, y, z = e3dsecs.coordinates.sph_to_car((RE+alts, 90-lats, lons), deg=True)
 for i,s in enumerate(sites):
     ax.scatter(x[i], y[i], z[i], label=s, marker='*', s=55)
 ax.legend(frameon=False)
@@ -139,13 +132,13 @@ sh = grid.shape
 # glon, glat = geomag2geog(np.radians(grid.lon[sh[0]//2,0]), np.radians(90-grid.lat[sh[0]//2,0]))
 glon = grid.lon[sh[0]//2+5,0] 
 glat = grid.lat[sh[0]//2,0]
-x_, y_, z_ = sph_to_car((RE+alt, 90-glat, glon), deg=True)
+x_, y_, z_ = e3dsecs.coordinates.sph_to_car((RE+alt, 90-glat, glon), deg=True)
 w = grid.W/1000
 ax.text(x_[0], y_[0], z_[0], '%3i km' % w, 'y', fontsize=10) 
 
 glon = grid.lon[0,sh[1]//2] 
 glat = grid.lat[0,sh[1]//2-1]
-x_, y_, z_ = sph_to_car((RE+alt, 90-glat, glon), deg=True)
+x_, y_, z_ = e3dsecs.coordinates.sph_to_car((RE+alt, 90-glat, glon), deg=True)
 l = grid.L/1000
 ax.text(x_[0], y_[0], z_[0], '%3i km' % l, fontsize=10) 
 
@@ -154,7 +147,7 @@ lat_ = grid.projection.position[1] # in degrees
 lon_ = grid.projection.position[0] # in degrees
 L = grid.L*1e-3
 Lres = grid.Lres*1e-3
-x_, y_, z_ = sph_to_car((RE, 90-lat_, lon_), deg=True)
+x_, y_, z_ = e3dsecs.coordinates.sph_to_car((RE, 90-lat_, lon_), deg=True)
 xlim = (x_[0]-L+3*Lres, x_[0]+L-3*Lres) 
 ylim = (y_[0]-L+3*Lres, y_[0]+L-3*Lres) 
 # zlim = (RE, RE+alts_grid[-1]+1)

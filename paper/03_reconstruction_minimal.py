@@ -15,7 +15,6 @@ reconstruction_extended.py
 """
 
 import xarray as xr
-import gemini3d.read as read
 import numpy as np
 import lompe
 from secsy import cubedsphere
@@ -52,14 +51,18 @@ diagnostic      = True  # Wheter to make diagnostic plots
 
 ########################################
 # Load GEMINI grid and data
-path = "/Users/jone/BCSS-DAG Dropbox/Data/E3D_GEMINI_paper/" # Adjust to fit your system
+# path = "/Users/jone/BCSS-DAG Dropbox/Data/E3D_GEMINI_paper/" # Adjust to fit your system
+path = '/Users/jone/Documents/uib_lagacy/gemini_output/'
 try: # look for saved file including some of the needed types of data    
-    dat = xr.open_dataset(path + 'temp3_dat.nc')
-    xg = read.grid(path)
+    dat = xr.open_dataset(path + 'gemini_dataset.nc')
+    xg = np.load(path + 'gemini_grid.npy', allow_pickle=True).item()
 except: # make the datafiles from reading GEMINI output
     xg, dat = e3dsecs.gemini_tools.read_gemini(path, timeindex=-1, maph=maph)
     dat.attrs={}
-    dat.to_netcdf('/Users/jone/BCSS-DAG Dropbox/Jone Reistad/tmpfiles/temp3_dat.nc')
+    dat.to_netcdf(path + 'gemini_dataset.nc')
+    del xg['glatctr']
+    del xg['glonctr']
+    np.save(path + 'gemini_grid.npy', xg)
 xgdat = (xg, dat)
 
 ########################################
