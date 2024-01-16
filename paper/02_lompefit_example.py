@@ -11,10 +11,7 @@ This script is designated to produce Figures describing the Lompe fit part of th
 
 """
 
-
-
 import sys
-sys.path.append('/Users/jone/BCSS-DAG Dropbox/Jone Reistad/git/DAG/src')
 sys.path.append('/Users/jone/BCSS-DAG Dropbox/Jone Reistad')
 import git.e3dsecs as e3dsecs
 import numpy as np
