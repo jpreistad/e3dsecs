@@ -19,16 +19,10 @@ sys.path.append('/Users/jone/BCSS-DAG Dropbox/Jone Reistad')
 import git.e3dsecs as e3dsecs
 import numpy as np
 import apexpy
-from gemini3d.grid.convert import geomag2geog, geog2geomag
-import gemini3d.read as read
+from gemini3d.grid.convert import geog2geomag
 import xarray as xr
-import time
 import lompe
 import matplotlib.pyplot as plt
-import secsy as cs
-
-
-startTime = time.time()
 
 
 ########################################
@@ -51,14 +45,18 @@ inputmode       = 'vi'  # How jperp is estimated. Must be either:
 
 ########################################
 # Load GEMINI grid and data
-path = "/Users/jone/BCSS-DAG Dropbox/Data/E3D_GEMINI_paper/" # Adjust to fit your system
+# path = "/Users/jone/BCSS-DAG Dropbox/Data/E3D_GEMINI_paper/" # Adjust to fit your system
+path = '/Users/jone/Documents/uib_lagacy/gemini_output/'
 try: # look for saved file including some of the needed types of data    
-    dat = xr.open_dataset(path + 'temp3_dat.nc')
-    xg = read.grid(path)
+    dat = xr.open_dataset(path + 'gemini_datset.nc')
+    xg = np.load(path + 'gemini_grid.npy', allow_pickle=True).item()
 except: # make the datafiles from reading GEMINI output
     xg, dat = e3dsecs.gemini_tools.read_gemini(path, timeindex=-1, maph=maph)
     dat.attrs={}
-    dat.to_netcdf('/Users/jone/BCSS-DAG Dropbox/Jone Reistad/tmpfiles/temp3_dat.nc')
+    dat.to_netcdf(path + 'gemini_dataset.nc')
+    del xg['glatctr']
+    del xg['glonctr']
+    np.save(path + 'gemini_grid.npy', xg)
 xgdat = (xg, dat)
 
 
