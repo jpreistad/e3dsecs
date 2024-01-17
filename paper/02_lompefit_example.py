@@ -6,16 +6,22 @@ Created on Wed Dec 20 10:39:38 2023
 @author: jone
 
 Script to produce figures for the E3D reconstruction paper
-
 This script is designated to produce Figures describing the Lompe fit part of the analysis
+Adjust the two paths to fit your system:
+1) sys.path to contain the path to the e3dsecs directory
+2) path variable to point to gemini output datafiles. These are also stored on the DAG 
+    Dropbox Data folder
 
 """
-nrec = True
+
+nrec = True # For testing to use with nrec virtual machine
 import sys
 if nrec:
     sys.path.append('/home/ubuntu/git/e3dsecs')
+    path = '/home/ubuntu/gemini_data/e3dpaper_datafiles/'
 else:
     sys.path.append('/Users/jone/Dropbox (Personal)/uib/researcher/git/e3dsecs')
+    path = '/Users/jone/Documents/uib/gemini_output/'# Adjust to fit your system
 from e3dsecs import gemini_tools, coordinates, diagnostics, secs3d, uncertainty
 import numpy as np
 import apexpy
@@ -45,8 +51,6 @@ inputmode       = 'vi'  # How jperp is estimated. Must be either:
 
 ########################################
 # Load GEMINI grid and data
-# path = "/Users/jone/BCSS-DAG Dropbox/Data/E3D_GEMINI_paper/" # Adjust to fit your system
-path = '/Users/jone/Documents/uib_lagacy/gemini_output/'
 try: # look for saved file including some of the needed types of data    
     dat = xr.open_dataset(path + 'gemini_dataset.nc')
     xg = np.load(path + 'gemini_grid.npy', allow_pickle=True).item()

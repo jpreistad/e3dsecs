@@ -12,8 +12,10 @@ nrec = True
 import sys
 if nrec:
     sys.path.append('/home/ubuntu/git/e3dsecs')
+    path = '/home/ubuntu/gemini_data/e3dpaper_datafiles/'
 else:
     sys.path.append('/Users/jone/Dropbox (Personal)/uib/researcher/git/e3dsecs')
+    path = '/Users/jone/Documents/uib/gemini_output/'# Adjust to fit your system
 from e3dsecs import gemini_tools, coordinates, visualization
 import numpy as np
 from gemini3d.grid.convert import geomag2geog
@@ -30,10 +32,6 @@ RE = 6371.2 #Earth radius in km
 
 ########################################
 # Load GEMINI grid and data
-if nrec:
-    path = '/home/ubuntu/gemini_data/e3dpaper_datafiles/'
-else:
-    path = '/Users/jone/Documents/uib_lagacy/gemini_output/'# Adjust to fit your system
 try: # look for saved file including some of the needed types of data    
     dat = xr.open_dataset(path + 'gemini_dataset.nc')
     xg = np.load(path + 'gemini_grid.npy', allow_pickle=True).item()
