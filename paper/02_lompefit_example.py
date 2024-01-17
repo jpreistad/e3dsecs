@@ -10,9 +10,12 @@ Script to produce figures for the E3D reconstruction paper
 This script is designated to produce Figures describing the Lompe fit part of the analysis
 
 """
-
+nrec = True
 import sys
-sys.path.append('/Users/jone/Dropbox (Personal)/uib/researcher/git/e3dsecs')
+if nrec:
+    sys.path.append('/home/ubuntu/git/e3dsecs')
+else:
+    sys.path.append('/Users/jone/Dropbox (Personal)/uib/researcher/git/e3dsecs')
 from e3dsecs import gemini_tools, coordinates, diagnostics, secs3d, uncertainty
 import numpy as np
 import apexpy
