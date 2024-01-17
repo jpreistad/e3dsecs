@@ -12,8 +12,8 @@ This script is designated to produce Figures describing the Lompe fit part of th
 """
 
 import sys
-sys.path.append('/Users/jone/BCSS-DAG Dropbox/Jone Reistad')
-import git.e3dsecs as e3dsecs
+sys.path.append('/Users/jone/Dropbox (Personal)/uib/researcher/git/e3dsecs')
+from e3dsecs import gemini_tools, coordinates, diagnostics, secs3d, uncertainty
 import numpy as np
 import apexpy
 from gemini3d.grid.convert import geog2geomag
@@ -48,7 +48,7 @@ try: # look for saved file including some of the needed types of data
     dat = xr.open_dataset(path + 'gemini_dataset.nc')
     xg = np.load(path + 'gemini_grid.npy', allow_pickle=True).item()
 except: # make the datafiles from reading GEMINI output
-    xg, dat = e3dsecs.gemini_tools.read_gemini(path, timeindex=-1, maph=maph)
+    xg, dat = gemini_tools.read_gemini(path, timeindex=-1, maph=maph)
     dat.attrs={}
     dat.to_netcdf(path + 'gemini_dataset.nc')
     del xg['glatctr']
@@ -65,7 +65,7 @@ alts_grid = np.concatenate((np.arange(90,140,5),np.arange(140,170,10),
 altres = np.diff(alts_grid)*0.5
 altres = np.abs(np.concatenate((np.array([altres[0]]),altres)))
 # Horizontal CS grid
-grid, grid_l = e3dsecs.gemini_tools.make_csgrid(xg, maph=maph, h0=alts_grid[0], 
+grid, grid_l = gemini_tools.make_csgrid(xg, maph=maph, h0=alts_grid[0], 
                                     crop_factor=0.2, resolution_factor=0.45, 
                                     extend=extend, dlat = 0.2)
 #Grid dimensions
@@ -90,7 +90,7 @@ lats0 = np.array([69.39, 68.44, 68.37])
 lons0 = np.array([20.26, 22.48, 19.10])
 lats = np.array([sitelat, lats0[1]-dlat, lats0[2]-dlat])
 lons = np.array([sitelon, lons0[1]-dlon, lons0[2]-dlon])
-datadict = e3dsecs.gemini_tools.sample_eiscat(xg, dat, min_alt=min_alt, max_alt=max_alt, 
+datadict = gemini_tools.sample_eiscat(xg, dat, min_alt=min_alt, max_alt=max_alt, 
                         dr=dr, sitelat=sitelat, sitephi=sitelon, az=az, el=el)
 datadict['maph'] = maph
 if e3doubt_:
@@ -101,19 +101,19 @@ if e3doubt_:
         datadict = np.load('./inversion_coefs/datadict_temp.npy', allow_pickle=True).item()
         datadict_backup = datadict.copy()
     except:
-        datadict = e3dsecs.uncertainty.get_datacov_e3doubt(datadict, intsec=intsec, 
+        datadict = uncertainty.get_datacov_e3doubt(datadict, intsec=intsec, 
                             transmitter=transmitter, receivers=receivers)
-        datadict = e3dsecs.uncertainty.remove_bad(datadict)
+        datadict = uncertainty.remove_bad(datadict)
         datadict_backup = datadict.copy()
         np.save('./inversion_coefs/datadict_temp.npy', datadict)
     if addnoise:
-        datadict = e3dsecs.uncertainty.add_noise(datadict, maph, alternative=True)
+        datadict = uncertainty.add_noise(datadict, maph, alternative=True)
 
 ########################################
 # Step 1: Make v_perp representation at maph if specified by inputmode
-filename, filename_lompe = e3dsecs.secs3d.make_filenames(grid.projection.position, inputmode)
+filename, filename_lompe = secs3d.make_filenames(grid.projection.position, inputmode)
 if (inputmode=='vi') or (inputmode=='vi_ohmslaw'):
-    datadict, lmodel = e3dsecs.gemini_tools.make_lompe(grid_l, datadict, inputmode, 
+    datadict, lmodel = gemini_tools.make_lompe(grid_l, datadict, inputmode, 
                             maph, e3doubt_=e3doubt_, l1_lompe=l1_lompe, l2_lompe=l2_lompe, 
                             intsec=intsec, filename_lompe=filename_lompe)
     datadict_backup = datadict.copy()
@@ -132,12 +132,12 @@ apex = apexpy.Apex(2023)
 ax.set_axis_off()
 ax.set_aspect('equal')
 N = lmodel.grid_E.lat.size
-RE = e3dsecs.gemini_tools.RE
+RE = gemini_tools.RE
 shape = lmodel.grid_E.shape
-datadict = e3dsecs.gemini_tools.sample_points(xg, dat, lmodel.grid_E.lat.flatten(), 
+datadict = gemini_tools.sample_points(xg, dat, lmodel.grid_E.lat.flatten(), 
                                               lmodel.grid_E.lon.flatten(), 
                                               np.ones(N)*lmodel.R*1e-3-RE)
-br, btheta, bphi = e3dsecs.secs3d.make_b_unitvectors(datadict['Bu'], 
+br, btheta, bphi = secs3d.make_b_unitvectors(datadict['Bu'], 
                 -datadict['Bn'], datadict['Be'])
 datadict['fac'] = np.sum(np.array([datadict['ju'], -datadict['jn'], datadict['je']]) * 
                 np.array([br, btheta, bphi]), axis=0)
@@ -207,10 +207,10 @@ alt_ev, eta_ev, xi_ev = np.meshgrid(alts__, eta_e, xi_e, indexing='ij')
 # eta_ev, xi_ev = np.meshgrid(eta_e, xi_e, indexing='ij')
 lon_ev, lat_ev = grid.projection.cube2geo(xi_ev, eta_ev) 
 # alt_ev = np.ones(lon_ev.shape) * maph
-datadict = e3dsecs.gemini_tools.sample_points(xg, dat, lat_ev, lon_ev, alt_ev)
+datadict = gemini_tools.sample_points(xg, dat, lat_ev, lon_ev, alt_ev)
 datadict['maph'] = maph
 
-axs2 = e3dsecs.diagnostics.scatterplot_lompe(ax2, lmodel, datadict, xgdat)
+axs2 = diagnostics.scatterplot_lompe(ax2, lmodel, datadict, xgdat)
 axs2.set_title('Performance of estimated $\\mathbf{v}_{\perp}$ > ' + str(maph)+ 'km')
 
 arrowax = plt.subplot2grid((11, 20), (10, 0), rowspan = 1, colspan = 10)
@@ -234,13 +234,13 @@ eta_e = grid.eta_mesh[1:,0]- grid.deta/2
 alt_ev, eta_ev, xi_ev = np.meshgrid(alts__, eta_e, xi_e, indexing='ij')
 lon_ev, lat_ev = grid.projection.cube2geo(xi_ev, eta_ev) 
 shape = lon_ev.shape
-datadict = e3dsecs.gemini_tools.sample_points(xg, dat, lat_ev, lon_ev, alt_ev)
+datadict = gemini_tools.sample_points(xg, dat, lat_ev, lon_ev, alt_ev)
 # if e3doubt_:
-#     datadict = e3dsecs.uncertainty.get_datacov_e3doubt(datadict, intsec=intsec)
-#     datadict = e3dsecs.uncertainty.remove_bad(datadict)
+#     datadict = uncertainty.get_datacov_e3doubt(datadict, intsec=intsec)
+#     datadict = uncertainty.remove_bad(datadict)
 #     datadict_backup = datadict.copy()
 #     if addnoise:
-#         datadict = e3dsecs.uncertainty.add_noise(datadict, maph)
+#         datadict = uncertainty.add_noise(datadict, maph)
 #         datadict_backup = datadict.copy()
 datadict['shape'] = shape
 datadict['maph'] = maph
@@ -248,9 +248,9 @@ N = datadict['lat'].size
 jjj = np.hstack((datadict['jperpu'],-datadict['jperpn'],datadict['jperpe'])) # jperp from GEMINI, in geo (r,theta,phi)
 ext_factor = 0
 if not 'phitop' in inputmode:
-    vperp = e3dsecs.gemini_tools.get_E_from_lmodel(lmodel, datadict, xgdat, returnvperp=True)
+    vperp = gemini_tools.get_E_from_lmodel(lmodel, datadict, xgdat, returnvperp=True)
     datadict['vperp_electron'] = vperp
-inputdict = e3dsecs.gemini_tools.make_inputdict(datadict, grid, alts_grid,
+inputdict = gemini_tools.make_inputdict(datadict, grid, alts_grid,
                     inputmode=inputmode, ext_factor=0, hp_from_brekke=False)
 jperp_enu = np.vstack((inputdict['jperp'][0,:],inputdict['jperp'][1,:],inputdict['jperp'][2,:])).T
 
@@ -266,7 +266,7 @@ elif inputmode=='vi_ohmslaw':
 else:
     savesuff = '_' + inputmode + '_'
 inside = np.array([True]*N)
-fig = e3dsecs.diagnostics.compare_input_jperp(datadict, jjj2, inside, 
+fig = diagnostics.compare_input_jperp(datadict, jjj2, inside, 
                 savesuff, grid, alts_grid, sliceindex=3, 
                 maph=maph, dim=2, param='jperpphi', pdf=True)
 fig.savefig('./plots/input_jperp_'+inputmode+'.pdf', dpi=250,bbox_inches='tight')
@@ -294,12 +294,12 @@ if e3doubt_:
     # datadict['sigma_vu'] = np.sqrt(datadict['cov_ve'][2,2,:])
 
     clim = 2e-5  
-    ax1 = e3dsecs.diagnostics.plot_analysis_grid(datadict, grid, alts_grid, 
+    ax1 = diagnostics.plot_analysis_grid(datadict, grid, alts_grid, 
                     1, 1, 1, dipole_lompe=False, data=True, eiscat=True, _d=400, 
                     q='jperpe', cmap='bwr', clim=clim, diverging=True, ax=ax1)
     ax1.set_title('$j_{\perp, \phi}$ from GEMINI', fontsize=16)
     ax1.text(1900,850, 6200, 'A', fontsize=16)
-    ax2 = e3dsecs.diagnostics.plot_analysis_grid(datadict, grid, alts_grid, 
+    ax2 = diagnostics.plot_analysis_grid(datadict, grid, alts_grid, 
                     1, 1, 1, dipole_lompe=False, data=True, eiscat=True, _d=400, 
                     q='dje', cmap='bwr', clim=clim, diverging=True, ax=ax2) 
     ax2.set_title('Uncertainty of $j_{\perp, \phi}$', fontsize=16)
@@ -316,7 +316,7 @@ if e3doubt_:
     cb1.set_label('[A/m$^2$]', fontsize=16)
     
     clim=1
-    ax4 = e3dsecs.diagnostics.plot_analysis_grid(datadict, grid, alts_grid, 
+    ax4 = diagnostics.plot_analysis_grid(datadict, grid, alts_grid, 
                     1, 1, 1, dipole_lompe=False, data=True, eiscat=True, _d=400, 
                     q='SNRe', cmap='viridis', clim=clim, diverging=False, ax=ax4) 
     ax4.set_title('SNR of $j_{\perp,\phi}$', fontsize=16)
