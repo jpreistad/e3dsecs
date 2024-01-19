@@ -25,6 +25,7 @@ import gemini3d.read as read
 import dipole
 import scipy
 import matplotlib.pyplot as plt
+import h5py
 
 RE = 6371.2 #Earth radius in km
 
@@ -1193,3 +1194,26 @@ def make_lompe(grid_l, datadict, inputmode, maph, e3doubt_=True,
         lmodel=None
     
     return (datadict, lmodel)
+
+
+def read_hdf5_to_dict(file_path):
+    '''
+    Function that read a HDF file and puts it into a dictionary.
+    Intended to use on the gemini_gri.h5 file to make it back
+    into the xg grid dictionary.
+    '''
+
+    # Initialize an empty dictionary to store the data
+    data_dict = {}
+
+    # Open the HDF5 file in read mode
+    with h5py.File(file_path, 'r') as file:
+        # Iterate over the datasets in the HDF5 file
+        for key in file.keys():
+            # Retrieve the data for each dataset
+            data = file[key][()]
+
+            # Add the data to the dictionary
+            data_dict[key] = data
+
+    return data_dict

@@ -30,6 +30,8 @@ import xarray as xr
 import numpy as np
 import lompe
 from secsy import cubedsphere
+import h5py
+
 
 ########################################
 # Run options
@@ -60,16 +62,20 @@ diagnostic      = True  # Wheter to make diagnostic plots
 
 ########################################
 # Load GEMINI grid and data
+# Load GEMINI grid and data
 try: # look for saved file including some of the needed types of data    
     dat = xr.open_dataset(path + 'gemini_dataset.nc')
-    xg = np.load(path + 'gemini_grid.npy', allow_pickle=True).item()
+    xg = gemini_tools.read_hdf5_to_dict(path + 'gemini_grid.h5')
 except: # make the datafiles from reading GEMINI output
     xg, dat = gemini_tools.read_gemini(path, timeindex=-1, maph=maph)
     dat.attrs={}
     dat.to_netcdf(path + 'gemini_dataset.nc')
     del xg['glatctr']
     del xg['glonctr']
-    np.save(path + 'gemini_grid.npy', xg)
+    del xg['filename']
+    with h5py.File(path + 'gemini_grid.h5', 'w') as file:
+        for key, value in xg.items():
+            file.create_dataset(key, data=value)
 xgdat = (xg, dat)
 
 ########################################

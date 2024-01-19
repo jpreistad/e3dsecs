@@ -39,7 +39,8 @@ git clone https://github.com/jpreistad/e3dsecs.git
 mkdir e3secs/paper/inversion_coefs  
 
 ### Download sample datafiles
-A sample datafile with a corresponding grid file must be downloaded. This is output from a GEMINI simulation that is used for benchmarching of the reconstruction
+A sample datafile with a corresponding grid file must be downloaded. This is output from a GEMINI simulation that is used for benchmarching of the reconstruction.  
+Data can be downloaded from: 
 
 ### Update paths
 To run the example scripts in the ./paper/ folder producing the figures in the paper describing the tehnique, the path to the datafiles must be updated in the scripts. Also, the clone-path must be added to the sys.path variable
