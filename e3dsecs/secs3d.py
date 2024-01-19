@@ -1624,9 +1624,6 @@ def run_inversion(grid, alts_grid, datadict, inputmode='vi', lmodel=None,
         resnorm, modelnorm, ls = crossvalidation(GTG, GTd, altreg, xgdat, grid, 
                                     alts_grid, inputmode=inputmode, steps=15, 
                                     lmodel=lmodel)
-        print(resnorm)
-        print(modelnorm)
-        print(ls)
         print('In the following, l1 = %5f is used.' % ls[np.argmin(resnorm)])
         l1 = 10**(ls[np.argmin(resnorm)])
     l1star = l1 * gtg_mag
