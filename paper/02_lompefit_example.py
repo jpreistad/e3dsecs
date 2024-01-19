@@ -18,7 +18,7 @@ nrec = True # For testing to use with nrec virtual machine
 import sys
 if nrec:
     sys.path.append('/home/ubuntu/git/e3dsecs')
-    path = '/home/ubuntu/gemini_data/e3dpaper_datafiles/'
+    path = '/mnt/data2/gemini/gemini_data/e3dpaper_datafiles/'
 else:
     sys.path.append('/Users/jone/Dropbox (Personal)/uib/researcher/git/e3dsecs')
     path = '/Users/jone/Documents/uib/gemini_output/'# Adjust to fit your system
