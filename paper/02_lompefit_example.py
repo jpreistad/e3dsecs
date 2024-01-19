@@ -169,10 +169,10 @@ phi, theta = geog2geomag(datadict['lon'], datadict['lat'])
 lat = 90-np.degrees(theta)
 cc = ax.contour(lmodel.grid_E.xi, lmodel.grid_E.eta, lat.reshape(shape), 
            levels=levels, colors='grey', zorder=1000, linewidths=0.5)
-labels = ax.clabel(cc, inline=True, fontsize=8, colors='k', fmt='%2i$^\circ$')
+labels = ax.clabel(cc, inline=True, fontsize=8, colors='k', fmt=r'%2i$^\circ$')
 cc2 = ax.contour(lmodel.grid_E.xi, lmodel.grid_E.eta, datadict['lat'].reshape(shape), 
            levels=levels_gg, colors='grey', zorder=1000, linewidths=0.5, alpha=0.3)
-labels = ax.clabel(cc2, inline=True, fontsize=8, colors='k', fmt='%2i$^\circ$')
+labels = ax.clabel(cc2, inline=True, fontsize=8, colors='k', fmt=r'%2i$^\circ$')
 
 #Colorbar
 cbarax = plt.subplot2grid((20,21), (2, 20), rowspan = 16, colspan = 1)
@@ -182,7 +182,7 @@ norm = mpl.colors.Normalize(vmin=-clim, vmax=clim)
 cb1 = mpl.colorbar.ColorbarBase(cbarax, cmap=cmap,
                             norm=norm,
                             orientation='vertical')
-cb1.set_label('[A/m$^2$]', fontsize=12)
+cb1.set_label(r'[A/m$^2$]', fontsize=12)
 
 fig.savefig('./plots/gemini.pdf',bbox_inches='tight')
 
@@ -195,7 +195,7 @@ lompe.visualization.format_ax(ax1, lmodel, apex = apex)
 lompe.visualization.plot_quiver(ax1, lmodel, 'convection')
 lompe.visualization.plot_potential(ax1, lmodel)
 lompe.visualization.plot_datasets(ax1, lmodel, 'convection')
-ax1.set_title('Estimate $\\mathbf{v}_{\perp}$ with E3D sampling > ' + str(maph) + 'km')
+ax1.set_title(r'Estimate $\mathbf{v}_{\perp}$ with E3D sampling > ' + str(maph) + 'km')
 xi_corners = [grid_l.xi_mesh[0,extend],grid_l.xi_mesh[0,-extend-1],
               grid_l.xi_mesh[0,-extend-1],grid_l.xi_mesh[0,extend],grid_l.xi_mesh[0,extend]]
 eta_corners = [grid_l.eta_mesh[extend,0], grid_l.eta_mesh[extend,0], 
@@ -218,7 +218,7 @@ datadict = gemini_tools.sample_points(xg, dat, lat_ev, lon_ev, alt_ev)
 datadict['maph'] = maph
 
 axs2 = diagnostics.scatterplot_lompe(ax2, lmodel, datadict, xgdat)
-axs2.set_title('Performance of estimated $\\mathbf{v}_{\perp}$ > ' + str(maph)+ 'km')
+axs2.set_title(r'Performance of estimated $\mathbf{v}_{\perp}$ > ' + str(maph)+ 'km')
 
 arrowax = plt.subplot2grid((11, 20), (10, 0), rowspan = 1, colspan = 10)
 arrowax.quiver(.2, .001, 1, 0, scale = 2, scale_units = 'inches')
@@ -304,12 +304,12 @@ if e3doubt_:
     ax1 = diagnostics.plot_analysis_grid(datadict, grid, alts_grid, 
                     1, 1, 1, dipole_lompe=False, data=True, eiscat=True, _d=400, 
                     q='jperpe', cmap='bwr', clim=clim, diverging=True, ax=ax1)
-    ax1.set_title('$j_{\perp, \phi}$ from GEMINI', fontsize=16)
+    ax1.set_title(r'$j_{\perp, \phi}$ from GEMINI', fontsize=16)
     ax1.text(1900,850, 6200, 'A', fontsize=16)
     ax2 = diagnostics.plot_analysis_grid(datadict, grid, alts_grid, 
                     1, 1, 1, dipole_lompe=False, data=True, eiscat=True, _d=400, 
                     q='dje', cmap='bwr', clim=clim, diverging=True, ax=ax2) 
-    ax2.set_title('Uncertainty of $j_{\perp, \phi}$', fontsize=16)
+    ax2.set_title(r'Uncertainty of $j_{\perp, \phi}$', fontsize=16)
     ax2.text(1900,850, 6200, 'B', fontsize=16)
 
     #Colorbar upper row
@@ -320,13 +320,13 @@ if e3doubt_:
     cb1 = mpl.colorbar.ColorbarBase(cbarax, cmap=cmap,
                                 norm=norm,
                                 orientation='vertical')
-    cb1.set_label('[A/m$^2$]', fontsize=16)
+    cb1.set_label(r'[A/m$^2$]', fontsize=16)
     
     clim=1
     ax4 = diagnostics.plot_analysis_grid(datadict, grid, alts_grid, 
                     1, 1, 1, dipole_lompe=False, data=True, eiscat=True, _d=400, 
                     q='SNRe', cmap='viridis', clim=clim, diverging=False, ax=ax4) 
-    ax4.set_title('SNR of $j_{\perp,\phi}$', fontsize=16)
+    ax4.set_title(r'SNR of $j_{\perp,\phi}$', fontsize=16)
     ax4.text(1900,850, 6200, 'D', fontsize=16)
 
     #Colorbar lower row
@@ -348,10 +348,10 @@ if e3doubt_:
     _el = datadict['el_all'][n*nn+d]
     # _az = datadict['az_all'][N-nn]#[n*nn+d]
     # _el = datadict['el_all'][N-nn]#[n*nn+d]    
-    s_str = 'SNR $j_{\perp,\phi}$, el=$%3.1f^\circ$, az=$%3.1f^\circ$' % (_el,_az)
+    s_str = r'SNR $j_{\perp,\phi}$, el=$%3.1f^\circ$, az=$%3.1f^\circ$' % (_el,_az)
     ax3.plot(datadict['SNRe'][n*nn+d:n*nn+20+d], datadict['alt'][n*nn+d:n*nn+20+d], label=s_str)
     # ax3.plot(datadict['SNRe'][N-nn:N-nn+20], datadict['alt'][N-nn:N-nn+20], label=s_str)
-    ax3.plot(np.abs(1e5*datadict['jperpe'][n*nn+d:n*nn+20+d]), datadict['alt'][n*nn+d:n*nn+20+d], label='1e5*abs(GEMINI $j_{\perp,\phi}$)')
+    ax3.plot(np.abs(1e5*datadict['jperpe'][n*nn+d:n*nn+20+d]), datadict['alt'][n*nn+d:n*nn+20+d], label=r'1e5*abs(GEMINI $j_{\perp,\phi}$)')
     # ax3.plot(np.abs(1e5*datadict['jperpe'][N-nn:N-nn+20]), datadict['alt'][N-nn:N-nn+20], label='1e5*abs(GEMINI $j_{\perp,\phi}$)')
     ax3.legend(frameon=False)
     ax3.set_xlabel('SNR and 1e5 $j_{\perp,\phi}$')
