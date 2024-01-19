@@ -10,6 +10,7 @@ This script is intended to produce the figures for the 3D reconstruction paper
 using only the jperp observations along a set of beams to produce the result.
 More refined analysis based on more assumptions are done in a separate script,
 reconstruction_extended.py
+
 Adjust the two paths to fit your system:
 1) sys.path to contain the path to the e3dsecs directory
 2) path variable to point to gemini output datafiles. These are also stored on the DAG 

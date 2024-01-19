@@ -6,6 +6,8 @@ Created on Tue Nov 14 21:28:57 2023
 @author: jone
 Make a figure of an example of a 3D grid
 
+Adjust the following path to fit your system:
+1) sys.path to contain the path to the e3dsecs directory
 """
 
 nrec = True

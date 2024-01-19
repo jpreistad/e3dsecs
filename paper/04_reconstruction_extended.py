@@ -11,16 +11,25 @@ using extended strategies to solve for the model parameters, such as specifyin
 radial/FAC pattern on top, and/or requiring the vertical profile of the current
 density to follow a specific shape.
 
-
+Adjust the two paths to fit your system:
+1) sys.path to contain the path to the e3dsecs directory
+2) path variable to point to gemini output datafiles. These are also stored on the DAG 
+    Dropbox Data folder
 """
 
+nrec = True # For testing to use with nrec virtual machine
+import sys
+if nrec:
+    sys.path.append('/home/ubuntu/git/e3dsecs')
+    path = '/mnt/data2/gemini/gemini_data/e3dpaper_datafiles/'
+else:
+    sys.path.append('/Users/jone/Dropbox (Personal)/uib/researcher/git/e3dsecs')
+    path = '/Users/jone/Documents/uib/gemini_output/'# Adjust to fit your system
+from e3dsecs import gemini_tools, diagnostics, secs3d, uncertainty
 import xarray as xr
 import numpy as np
 import lompe
 from secsy import cubedsphere
-import sys
-sys.path.append('/Users/jone/BCSS-DAG Dropbox/Jone Reistad')
-import git.e3dsecs as e3dsecs
 
 ########################################
 # Run options
@@ -51,13 +60,11 @@ diagnostic      = True  # Wheter to make diagnostic plots
 
 ########################################
 # Load GEMINI grid and data
-# path = "/Users/jone/BCSS-DAG Dropbox/Data/E3D_GEMINI_paper/" # Adjust to fit your system
-path = '/Users/jone/Documents/uib_lagacy/gemini_output/'
 try: # look for saved file including some of the needed types of data    
     dat = xr.open_dataset(path + 'gemini_dataset.nc')
     xg = np.load(path + 'gemini_grid.npy', allow_pickle=True).item()
 except: # make the datafiles from reading GEMINI output
-    xg, dat = e3dsecs.gemini_tools.read_gemini(path, timeindex=-1, maph=maph)
+    xg, dat = gemini_tools.read_gemini(path, timeindex=-1, maph=maph)
     dat.attrs={}
     dat.to_netcdf(path + 'gemini_dataset.nc')
     del xg['glatctr']
@@ -73,7 +80,7 @@ alts_grid = np.concatenate((np.arange(90,140,5),np.arange(140,170,10),
 altres = np.diff(alts_grid)*0.5
 altres = np.abs(np.concatenate((np.array([altres[0]]),altres)))
 # Horizontal CS grid
-grid, grid_l = e3dsecs.gemini_tools.make_csgrid(xg, maph=maph, h0=alts_grid[0], 
+grid, grid_l = gemini_tools.make_csgrid(xg, maph=maph, h0=alts_grid[0], 
                                     crop_factor=0.2, resolution_factor=0.45, 
                                     extend=extend, dlat = 0.2)
 #Grid dimensions
@@ -98,7 +105,7 @@ lats0 = np.array([69.39, 68.44, 68.37])
 lons0 = np.array([20.26, 22.48, 19.10])
 lats = np.array([sitelat, lats0[1]-dlat, lats0[2]-dlat])
 lons = np.array([sitelon, lons0[1]-dlon, lons0[2]-dlon])
-datadict = e3dsecs.gemini_tools.sample_eiscat(xg, dat, min_alt=min_alt, max_alt=max_alt, 
+datadict = gemini_tools.sample_eiscat(xg, dat, min_alt=min_alt, max_alt=max_alt, 
                         dr=dr, sitelat=sitelat, sitephi=sitelon, az=az, el=el)
 datadict['maph'] = maph
 if e3doubt_:
@@ -109,21 +116,21 @@ if e3doubt_:
         datadict = np.load('./inversion_coefs/datadict_temp.npy', allow_pickle=True).item()
         datadict_backup = datadict.copy()
     except:
-        datadict = e3dsecs.uncertainty.get_datacov_e3doubt(datadict, intsec=intsec, 
+        datadict = uncertainty.get_datacov_e3doubt(datadict, intsec=intsec, 
                             transmitter=transmitter, receivers=receivers)
-        datadict = e3dsecs.uncertainty.remove_bad(datadict)
+        datadict = uncertainty.remove_bad(datadict)
         datadict_backup = datadict.copy()
         np.save('./inversion_coefs/datadict_temp.npy', datadict)
     if addnoise:
-        datadict = e3dsecs.uncertainty.add_noise(datadict, maph, alternative=True)
+        datadict = uncertainty.add_noise(datadict, maph, alternative=True)
 
 
 ########################################
 # Step 1: Make v_perp representation at maph if specified by inputmode
-filename, filename_lompe = e3dsecs.secs3d.make_filenames(grid.projection.position, 
+filename, filename_lompe = secs3d.make_filenames(grid.projection.position, 
                                 inputmode, factop=factop, vert_profile=vert_profile)
 if (inputmode=='vi') or (inputmode=='vi_ohmslaw'):
-    datadict, lmodel = e3dsecs.gemini_tools.make_lompe(grid_l, datadict, inputmode, 
+    datadict, lmodel = gemini_tools.make_lompe(grid_l, datadict, inputmode, 
                             maph, e3doubt_=e3doubt_, l1_lompe=l1_lompe, l2_lompe=l2_lompe, 
                             intsec=intsec, filename_lompe=filename_lompe)
 else:
@@ -131,7 +138,7 @@ else:
         
 #####################################
 # Step 2: Inversion
-filename, filename_lompe = e3dsecs.secs3d.run_inversion(grid, alts_grid, datadict, 
+filename, filename_lompe = secs3d.run_inversion(grid, alts_grid, datadict, 
                     inputmode=inputmode,lmodel=lmodel, factop=factop, 
                     vert_profile=vert_profile, vert_dprofile=vert_dprofile, 
                     l1=l1, diagnostic=diagnostic, overwrite=overwrite, gcv=gcv, 
@@ -141,7 +148,7 @@ filename, filename_lompe = e3dsecs.secs3d.run_inversion(grid, alts_grid, datadic
 ##########################################################
 ###### Analysis of performance########
 # Load inversion results
-filename, filename_lompe = e3dsecs.secs3d.make_filenames(grid.projection.position, 
+filename, filename_lompe = secs3d.make_filenames(grid.projection.position, 
                                 inputmode, factop=factop, vert_profile=vert_profile)
 m_ = np.load(filename, allow_pickle=True).item()
 m = m_['m']
@@ -175,25 +182,25 @@ shape = lon_ev.shape
 # First get the true values from GEMINI, and what the input values to the 3D 
 # inversion would have been given the lmodel at the evaluating locations, to
 # use for later performance evaluation
-datadict = e3dsecs.gemini_tools.sample_points(xg, dat, lat_ev, lon_ev, alt_ev)
+datadict = gemini_tools.sample_points(xg, dat, lat_ev, lon_ev, alt_ev)
 if not 'phitop' in inputmode:
-    vperp = e3dsecs.gemini_tools.get_E_from_lmodel(lmodel, datadict, xgdat, returnvperp=True)
+    vperp = gemini_tools.get_E_from_lmodel(lmodel, datadict, xgdat, returnvperp=True)
     datadict['vperp_electron'] = vperp
-inputdict = e3dsecs.gemini_tools.make_inputdict(datadict, grid, alts_grid,
+inputdict = gemini_tools.make_inputdict(datadict, grid, alts_grid,
                     inputmode=inputmode, ext_factor=-1, hp_from_brekke=False)
 d = np.hstack((inputdict['jperp'][2,:], -inputdict['jperp'][1,:], 
                inputdict['jperp'][0,:])) # (r, theta, phi components)
 
 # Evaluate model of current denisty
 #Make G to evaluate for full j based on the model made above
-G = e3dsecs.secs3d.make_G(grid, m_['alts_grid'], lat_ev, lon_ev, alt_ev, ext_factor=0)
+G = secs3d.make_G(grid, m_['alts_grid'], lat_ev, lon_ev, alt_ev, ext_factor=0)
 full_j = G.dot(m)
 #Get the jperp and fac of the ful_j expressed by the model, to be compared to input
-br, btheta, bphi = e3dsecs.secs3d.make_b_unitvectors(datadict['Bu'], 
+br, btheta, bphi = secs3d.make_b_unitvectors(datadict['Bu'], 
                 -datadict['Bn'], datadict['Be'])
 N = br.size
-B = e3dsecs.secs3d.make_B(br, btheta, bphi)
-P = e3dsecs.secs3d.make_P(N)
+B = secs3d.make_B(br, btheta, bphi)
+P = secs3d.make_P(N)
 j_perp = P.T.dot(B.dot(P.dot(full_j)))
 jpar = np.sum(np.array([full_j[0:N], full_j[N:2*N], full_j[2*N:3*N]]) * 
                 np.array([br, btheta, bphi]), axis=0)
@@ -210,19 +217,19 @@ if diagnostic:
     datadict['shape'] = shape
     
     # Scatterplot of reconstruction performance
-    fig = e3dsecs.diagnostics.scatterplot_reconstruction(grid, alts_grid, datadict, lon_ev.flatten(), \
+    fig = diagnostics.scatterplot_reconstruction(grid, alts_grid, datadict, lon_ev.flatten(), \
                                 lat_ev.flatten(), alt_ev.flatten(), full_j, jpar, \
                                 dipolekw=False, inout=False)
     fig.savefig('./plots/3d_reconstruction_extended_scatterplot.pdf', dpi=250,bbox_inches='tight')    
     
     #Make gifs of performance in different slices
     clim = 2e-5
-    fig = e3dsecs.diagnostics.reconsrtruction_performance(datadict, grid, alts_grid, lat_ev, 
+    fig = diagnostics.reconsrtruction_performance(datadict, grid, alts_grid, lat_ev, 
                                 lon_ev, alt_ev, full_j, jpar, dipolekw=False, cut='j', 
                                 clim=clim, single=4, gif=False, inputmode=inputmode)
     fig.savefig('./plots/3d_reconstruction_extended.pdf', dpi=250,bbox_inches='tight')
     
-    e3dsecs.diagnostics.model_amplitude_analysis(grid,alts_grid, m[1*K*I*J:2*K*I*J], clim=0.5, 
+    diagnostics.model_amplitude_analysis(grid,alts_grid, m[1*K*I*J:2*K*I*J], clim=0.5, 
                                          dipoleB=False, k=20)    
     
     ##############
@@ -230,7 +237,7 @@ if diagnostic:
     Cmpost = m_['Cmpost']
     covar_j = G.dot(Cmpost).dot(G.T) # Nothe the r,theta,phi order
     meshgrid = (alt_ev,lat_ev,lon_ev)
-    fig = e3dsecs.diagnostics.snr_output_plot(covar_j, meshgrid, datadict, grid, 
+    fig = diagnostics.snr_output_plot(covar_j, meshgrid, datadict, grid, 
                                 alts_grid, Cmpost, clim=clim, cut=['j','k','k'], 
                                 ind=[5,5,18], transmitter=transmitter,
                                 receivers=receivers)

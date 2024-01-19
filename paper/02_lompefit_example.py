@@ -7,6 +7,7 @@ Created on Wed Dec 20 10:39:38 2023
 
 Script to produce figures for the E3D reconstruction paper
 This script is designated to produce Figures describing the Lompe fit part of the analysis
+
 Adjust the two paths to fit your system:
 1) sys.path to contain the path to the e3dsecs directory
 2) path variable to point to gemini output datafiles. These are also stored on the DAG 
