@@ -449,14 +449,27 @@ def sample_eiscat(xg, dat, dr = 1, az=None, el=None, sitelat=67.36, sitephi=23.,
     alt_grid = np.arange(min_alt, max_alt, dr)
 
     if (az is None ) | (el is None):
-        # # Make a lot of beams
+        # Make a lot of beams
         Nrings = 5#18
         __el = np.linspace(35,80,Nrings)
         Naz = 10
-        __az = np.linspace(0,340,Naz)
-        _az, _el = np.meshgrid(__az, __el, indexing='ij')
-        az = _az.flatten()
-        el = _el.flatten()
+        __az = np.arange(0,360,360/Naz)
+        el = np.tile(__el,Naz)
+        _az = []
+        _daz = 360/Naz/2
+        daz = np.array([0,_daz,0,_daz,0]) # alter the az value every other ring
+        # daz = np.array([i*360/Naz/Nrings for i in np.arange(5)])
+        for a in __az:
+            _az.append(daz+a)
+        az = np.array(_az).flatten()  
+
+        # Nrings = 5#18
+        # __el = np.linspace(35,80,Nrings)
+        # Naz = 10
+        # __az = np.linspace(0,340,Naz)
+        # _az, _el = np.meshgrid(__az, __el, indexing='ij')
+        # az = _az.flatten()
+        # el = _el.flatten()          
         
         # add a vertical beam
         el = np.hstack((el,90))

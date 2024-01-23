@@ -181,15 +181,14 @@ def add_noise(ddict, minalt, alternative = True):
     ddict with updated values for the vperpmapped and vperp ion velocities.
 
     '''
-    
-    print('TODO: Add noise also to electron density')
-    
+       
     N = ddict['lat'].size
 
     # Arrays to hold the result
     v_enu_noisy = np.zeros((N,3))
     vperp_enu_noisy = np.zeros((N,3))
-    vperpmapped_enu_noisy = np.zeros((N,3))      
+    vperpmapped_enu_noisy = np.zeros((N,3))
+    ne_noisy = np.zeros(N)     
     
     # 0) obtain matrices that map the covairances:
     Gperpmapped = _make_vperpmappedG(ddict, minalt)
@@ -200,7 +199,8 @@ def add_noise(ddict, minalt, alternative = True):
   
     if alternative:  
         # Alternative approach: First add noise to full v, then estimate vperp and vmappedperp
-        for i in range(N):     
+        for i in range(N): 
+            # Noise in velocity observations   
             cov = ddict['cov_vi'][:,:,i]
             vi = np.hstack((ddict['ve'][i], ddict['vn'][i], ddict['vu'][i]))
             _noise = multivariate_normal(mean=np.zeros(3), cov=cov)
@@ -211,8 +211,13 @@ def add_noise(ddict, minalt, alternative = True):
             v_enu_noisy[i,:] = noisy_obs
             vperp_enu_noisy[i,:] = vperp_noisy
             vperpmapped_enu_noisy[i,:] = vperpmapped_noisy
-        
+
+            # Noise in electron density observations
+            _noise = multivariate_normal(mean=0, cov=ddict['var_ne'][i])
+            ne_noisy[i] = ddict['ne'][i] + _noise.rvs()
+
     else:
+        print('TODO: Add noise also to electron density')
         for i in range(N):     
             cov = ddict['cov_vi'][:,:,i]
     
@@ -258,8 +263,8 @@ def add_noise(ddict, minalt, alternative = True):
     ddict['vperpe'] = vperp_enu_noisy[:,0]
     ddict['vperpn'] = vperp_enu_noisy[:,1]
     ddict['vperpu'] = vperp_enu_noisy[:,2]
+    ddict['ne'] = ne_noisy
     
-
     # 3) Add the noise flag
     ddict['noise_added'] = True
     

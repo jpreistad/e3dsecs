@@ -17,7 +17,7 @@ Adjust the two paths to fit your system:
     Dropbox Data folder
 """
 
-nrec = True # For testing to use with nrec virtual machine
+nrec = False # For testing to use with nrec virtual machine
 import sys
 if nrec:
     sys.path.append('/home/ubuntu/git/e3dsecs')
@@ -42,8 +42,8 @@ inputmode =     'vi'    # How jperp is estimated. Must be either:
                         #   'phitop'        : Use potential at top from GEMINI and (vi-ve)
                         #   'phitop_ohmslaw': Use potential at top from GEMINI and Ohms law
                         #   'jperp'         : Use jperp directly sampled from GEMINI
-l1_lompe        = 1e-2  # Regularization parameter for Lompe representation
-l2_lompe        = 1e-2  # Regularization parameter for Lompe representation
+l1_lompe        = 1e-1  # Regularization parameter for Lompe representation
+l2_lompe        = 0     # Regularization parameter for Lompe representation
 l1              = 10**(-2.3)  # Regularization parameter for 3D reconstruction inversion
 intsec          = 5*60  # Integrationtime in seconds used in E3DOUBT
 factop          = True  # Provide values of vertical current at top of domain
@@ -134,6 +134,7 @@ if e3doubt_:
 filename, filename_lompe = secs3d.make_filenames(grid.projection.position, 
                                 inputmode, factop=factop, vert_profile=vert_profile)
 if (inputmode=='vi') or (inputmode=='vi_ohmslaw'):
+    # The make_lompe function also calculates all the necessary covariances
     datadict, lmodel = gemini_tools.make_lompe(grid_l, datadict, inputmode, 
                             maph, e3doubt_=e3doubt_, l1_lompe=l1_lompe, l2_lompe=l2_lompe, 
                             intsec=intsec, filename_lompe=filename_lompe)

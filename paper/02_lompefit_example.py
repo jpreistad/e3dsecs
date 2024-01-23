@@ -15,7 +15,7 @@ Adjust the two paths to fit your system:
 
 """
 
-nrec = True # For testing to use with nrec virtual machine
+nrec = False # For testing to use with nrec virtual machine
 import sys
 if nrec:
     sys.path.append('/home/ubuntu/git/e3dsecs')
@@ -38,11 +38,11 @@ import h5py
 # Run options
 maph            = 200   # height of mapping of ion velocity, in km.
 diagnostic      = True  # Wheter to make diagnostic plots
-e3doubt_        = True  # Spencers uncertainty 
+e3doubt_        = True  # Spencers uncertainty
 addnoise        = True  # based on e3doubt covariances
 intsec          = 5*60  # Integrationtime in seconds used in E3DOUBT
-l1_lompe        = 1e-2  # Regularization parameter for Lompe representation
-l2_lompe        = 1e-2  # Regularization parameter for Lompe representation
+l1_lompe        = 1e-1  # Regularization parameter for Lompe representation
+l2_lompe        = 0  # Regularization parameter for Lompe representation
 extend          = 5     # How many padding "frames" used for lompe grid around 3D hor. grid
 inputmode       = 'vi'  # How jperp is estimated. Must be either:
                         #   'vi'            : Use samples of ion velocities and (vi-ve)
@@ -126,6 +126,7 @@ if e3doubt_:
 # Step 1: Make v_perp representation at maph if specified by inputmode
 filename, filename_lompe = secs3d.make_filenames(grid.projection.position, inputmode)
 if (inputmode=='vi') or (inputmode=='vi_ohmslaw'):
+    # The make_lompe function also calculates all the necessary covariances
     datadict, lmodel = gemini_tools.make_lompe(grid_l, datadict, inputmode, 
                             maph, e3doubt_=e3doubt_, l1_lompe=l1_lompe, l2_lompe=l2_lompe, 
                             intsec=intsec, filename_lompe=filename_lompe)
@@ -346,8 +347,8 @@ if e3doubt_:
     cb2.set_label('[SNR]', fontsize=16)
     
     # SNR line plot    
-    n = 18 #3
-    d =-10 # -8
+    n = 38 #18 #3
+    d = 50 #-16 # -8
     nn = datadict['alts'].size
     N = datadict['el_all'].size
     _az = datadict['az_all'][n*nn+d]
