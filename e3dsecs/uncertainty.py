@@ -71,7 +71,7 @@ def get_datacov_e3doubt(ddict, intsec = 5*60, transmitter=('ski_mod', 67.2,23.7)
     cov = exp.get_velocity_cov_matrix()
 
     ddict['cov_vi'] = cov
-    ddict['var_ne'] = uncert.dnemulti.values
+    ddict['var_ne'] = uncert.dnemulti.values**2 # dnemulti is the standard deviation
     ddict['noise_added'] = False
     
 
