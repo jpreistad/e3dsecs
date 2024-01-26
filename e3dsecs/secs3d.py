@@ -1787,6 +1787,7 @@ def crossvalidation(GTG, GTd, altreg, xgdat, grid, alts_grid,
     ls = np.linspace(-7,4,steps)
     resnorm = []
     modelnorm = []
+    print('Printing: lambda1, residual norm, model norm')
     for l in ls:
         Reg = 10**l * gtg_mag * np.diag(altreg)
         GG = GTG + Reg
@@ -1796,7 +1797,7 @@ def crossvalidation(GTG, GTd, altreg, xgdat, grid, alts_grid,
         res = (d - G.dot(m))
         resnorm.append(np.sqrt(np.sum(res**2)))
         modelnorm.append(np.sqrt(np.sum(m**2)))
-        print(l)
+        print(l, np.sqrt(np.sum(res**2)), np.sqrt(np.sum(m**2)))
     plt.figure()
     print(resnorm)
     print(modelnorm)

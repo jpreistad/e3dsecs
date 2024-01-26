@@ -51,7 +51,7 @@ vert_profile    = 150   # Regularize vertical Hall and Pedersen profile based on
                         # GEMINI profile. None or # km from where it is applied above
 vert_dprofile   = False # Regularize vertical profile of gradient of H/P currents 
                         # based on electron density profile. NOT WORKING
-gcv             = True # Determine 3D model reg. parameter using cross-validation
+gcv             = True  # Determine 3D model reg. parameter using cross-validation
 overwrite       = True  # Overwrites exisring 3D model coefficient file
 e3doubt_        = True  # Estimate sample (co)variances of ne and v with E3DOUBT
 addnoise        = True  # Adds noise to data based on the E3DOUBT variances
