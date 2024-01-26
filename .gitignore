@@ -2,6 +2,7 @@
 e3dsecs/plots/uniform_sampling_slices/
 e3dsecs/inversion_coefs/
 paper/inversion_coefs/
+e3dsecs.code-workspace
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

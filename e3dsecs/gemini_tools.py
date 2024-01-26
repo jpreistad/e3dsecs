@@ -69,7 +69,7 @@ def read_gemini(path, timeindex=-1, maph=200):
     # Do mapping of observation to maph altitude
     dip = dipole.Dipole(dipole_pole=((90-11),289)) # These locations found in pygemini doc.
     d1, d2, d3, _1, _2, _3 = dip.get_apex_base_vectors_geo(xg['glon'].flatten(), 
-                        xg['glat'].flatten(), xg['alt'].flatten()*1e-3+RE, R=RE)
+                        xg['glat'].flatten(), xg['alt'].flatten()*1e-3+RE, R=RE+110)
     v = np.vstack((dat.ve.values.flatten(),dat.vn.values.flatten(),dat.vu.values.flatten()))
     #Calculate the quantities that is constant along the field-lines
     ve1 = (d1[0,:]*v[0,:] + d1[1,:]*v[1,:] + d1[2,:]*v[2,:]).reshape(sshh)
@@ -83,7 +83,7 @@ def read_gemini(path, timeindex=-1, maph=200):
     mappedglon, mappedglat = geomag2geog(mlon_1, colat_1) #returns in degrees
     # Calculate basis vectors at the mapped locations
     _1, _2, _3, e1, e2, e3 = dip.get_apex_base_vectors_geo(mappedglon.flatten(), 
-                        mappedglat.flatten(), r_1.flatten(), R=RE)
+                        mappedglat.flatten(), r_1.flatten(), R=RE+110)
     #Calculate the mapped velocity using eq 4.17 in Richmond 1995. geographic components, ENU            
     vperpmappede = (ve1.flatten()*e1[0,:] + ve2.flatten()*e2[0,:]).reshape(sshh)
     vperpmappedn = (ve1.flatten()*e1[1,:] + ve2.flatten()*e2[1,:]).reshape(sshh)
@@ -995,13 +995,13 @@ def get_E_from_lmodel(lmodel, ddict, xgdat, returnvperp=False):
     vperp = np.vstack((ve ,vn, vu))
     dip = dipole.Dipole(dipole_pole=((90-11),289)) # These locations found in pygemini doc.
     d1, d2, d3, _1, _2, _3 = dip.get_apex_base_vectors_geo(ddict['mappedglon'], 
-                        ddict['mappedglat'], lmodel.grid_E.R*1e-3, R=RE)
+                        ddict['mappedglat'], lmodel.grid_E.R*1e-3, R=RE+110)
     #Calculate the quantities that is constant along the field-lines
     ve1 = (d1[0,:]*vperp[0,:] + d1[1,:]*vperp[1,:] + d1[2,:]*vperp[2,:])
     ve2 = (d2[0,:]*vperp[0,:] + d2[1,:]*vperp[1,:] + d2[2,:]*vperp[2,:])
     # Calculate basis vectors at the mapped locations
     _1, _2, _3, e1, e2, e3 = dip.get_apex_base_vectors_geo(ddict['lon'], 
-                        ddict['lat'], ddict['alt']+RE, R=RE)
+                        ddict['lat'], ddict['alt']+RE, R=RE+110)
     #Calculate the mapped velocity using eq 4.17 in Richmond 1995. geographic components, ENU            
     vperpmappede = (ve1.flatten()*e1[0,:] + ve2.flatten()*e2[0,:])
     vperpmappedn = (ve1.flatten()*e1[1,:] + ve2.flatten()*e2[1,:])

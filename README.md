@@ -14,15 +14,12 @@ brew install rust
 brew install r  
 
 ### Setting up dediated environment
-mamba create -n e3dsecs  
+mamba create -n e3dsecs python=3.12 fortran-compiler pip ipython imageio  
 mamba activate e3dsecs  
 
 ### Python packages
-mamba install pip  
 pip install great-circle-calculator  
 pip install "lompe[deps-from-github,extras] @ git+https://github.com/klaundal/lompe.git@main"  
-mamba install ipython  
-mamba install imageio  
 git clone https://github.com/gemini3d/pygemini  
 pip install -e pygemini  
 git clone https://github.com/Dartspacephysiker/e3doubt  
@@ -32,7 +29,8 @@ git clone https://github.com/ilkkavir/ISgeometry.git
 cd ..  
 cd ..  
 
-#### E3DOUBT must be initiated before use, should be done at this point
+#### E3DOUBT must be initiated before use, should be done at this point, see readme file in e3doubt https://github.com/Dartspacephysiker/e3doubt  
+
 
 ### Clone this package, E3DSECS
 git clone https://github.com/jpreistad/e3dsecs.git  
@@ -40,7 +38,7 @@ mkdir e3secs/paper/inversion_coefs
 
 ### Download sample datafiles
 A sample datafile with a corresponding grid file must be downloaded. This is output from a GEMINI simulation that is used for benchmarching of the reconstruction.  
-Data can be downloaded from: 
+Data can be downloaded from:
 
 ### Update paths
 To run the example scripts in the ./paper/ folder producing the figures in the paper describing the tehnique, the path to the datafiles must be updated in the scripts. Also, the clone-path must be added to the sys.path variable
