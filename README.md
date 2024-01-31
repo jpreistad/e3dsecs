@@ -41,4 +41,4 @@ A sample datafile with a corresponding grid file must be downloaded. This is out
 Data can be downloaded from: https://doi.org/10.5281/zenodo.10561479  
 
 ### Update paths
-To run the example scripts in the ./paper/ folder producing the figures in the paper describing the tehnique, the path to the datafiles must be updated in the scripts. Also, the clone-path must be added to the sys.path variable
+To run the example notebooks in the ./paper/ folder producing the figures in the paper describing the tehnique, the path to the datafiles must be updated, set at top of each notebook.
