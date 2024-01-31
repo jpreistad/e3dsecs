@@ -15,9 +15,6 @@ import numpy as np
 from gemini3d.grid.convert import geog2geomag
 import gemini3d.grid.convert as convert
 
-from . import gemini_tools
-RE = gemini_tools.RE
-
 
 def _diff(_x, _s):
     '''

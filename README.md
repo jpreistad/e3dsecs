@@ -14,7 +14,7 @@ brew install rust
 brew install r  
 
 ### Setting up dediated environment
-mamba create -n e3dsecs python=3.12 fortran-compiler pip ipython imageio  
+mamba create -n e3dsecs python=3.12 fortran-compiler pip ipython imageio cmake  
 mamba activate e3dsecs  
 
 ### Python packages
@@ -38,7 +38,7 @@ mkdir e3secs/paper/inversion_coefs
 
 ### Download sample datafiles
 A sample datafile with a corresponding grid file must be downloaded. This is output from a GEMINI simulation that is used for benchmarching of the reconstruction.  
-Data can be downloaded from:
+Data can be downloaded from: https://doi.org/10.5281/zenodo.10561479  
 
 ### Update paths
 To run the example scripts in the ./paper/ folder producing the figures in the paper describing the tehnique, the path to the datafiles must be updated in the scripts. Also, the clone-path must be added to the sys.path variable

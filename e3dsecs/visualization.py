@@ -19,9 +19,11 @@ from gemini3d.grid.convert import geomag2geog
 from gemini3d.grid import convert
 import imageio
 
-from . import coordinates
-from . import gemini_tools
-RE = gemini_tools.RE
+try:
+    from . import coordinates
+except:
+    import coordinates
+RE = 6371.2 # Earth radius in km
 
 
 def fixed_alt(data, shape = None, crange=(-20,20), cbartitle='Arb.', **kwargs):
