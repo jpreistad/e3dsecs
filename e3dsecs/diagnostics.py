@@ -18,14 +18,16 @@ from gemini3d.grid.gridmodeldata import geog2dipole
 import scipy
 import matplotlib
 
-from . import secs3d
-from . import visualization
-from . import gemini_tools
-from . import coordinates
-RE = gemini_tools.RE
+try:
+    from . import visualization
+    from . import coordinates
+except:
+    import visualization
+    import coordinates    
+RE = 6371.2 # Earth radius in km
 
 
-def compare_input_jperp(datadict, jjj2, inside, savesuff, secs_grid, alts_grid, 
+def compare_input_jperp(dat, jjj2, inside, savesuff, secs_grid, alts_grid, 
                         dim=2, sliceindex=None, gif=False, maph=None, param='jperpphi', 
                         pdf=False, geomag=False):
     # Plot maps to compare where the estimated current differs from the GEMINI one
@@ -38,65 +40,67 @@ def compare_input_jperp(datadict, jjj2, inside, savesuff, secs_grid, alts_grid,
     #     print(1/0)
     
     # Input parameters
+    # dat : instance of the data class
+    # jjj2 : current density estimated
     # param = 'jperpphi' # the quantity to plot
     # dim = 2 # which dimension the slice will be from
     if geomag:
-        j_perp = np.hstack((datadict['jperpu_gm'],-datadict['jperpn_gm'],datadict['jperpe_gm']))
+        j_perp = np.hstack((dat.jperpu_gm,-dat.jperpn_gm,dat.jperpe_gm))
     else:
-        j_perp = np.hstack((datadict['jperpu'],-datadict['jperpn'],datadict['jperpe']))
-    N = datadict['lat'].size
+        j_perp = np.hstack((dat.jperpu,-dat.jperpn,dat.jperpe))
+    N = dat.lat.size
     if sliceindex is None:
-        slices = datadict['shape'][dim]
+        slices = dat.shape[dim]
     else:
         slices = [sliceindex]
     clim = 20e-6
     if param == 'jperpr':
         txt = '$\\mathbf{j}_{\perp,r}$'
-        ppp1 = j_perp[0:N].reshape(datadict['shape'])
-        ppp1[~inside.reshape(datadict['shape'])] = np.nan
+        ppp1 = j_perp[0:N].reshape(dat.shape)
+        ppp1[~inside.reshape(dat.shape)] = np.nan
         _ppp2 = jjj2[0,:]
-        ppp2 = np.zeros(datadict['shape'])
-        ppp2[~inside.reshape(datadict['shape'])] = np.nan
-        ppp2[inside.reshape(datadict['shape'])] = _ppp2
+        ppp2 = np.zeros(dat.shape)
+        ppp2[~inside.reshape(dat.shape)] = np.nan
+        ppp2[inside.reshape(dat.shape)] = _ppp2
     elif param == 'jperptheta':
         txt = '$\\mathbf{j}_{\perp,\\theta}$'
-        ppp1 = j_perp[N:2*N].reshape(datadict['shape'])
-        ppp1[~inside.reshape(datadict['shape'])] = np.nan
+        ppp1 = j_perp[N:2*N].reshape(dat.shape)
+        ppp1[~inside.reshape(dat.shape)] = np.nan
         _ppp2 = jjj2[1,:]
-        ppp2 = np.zeros(datadict['shape'])
-        ppp2[~inside.reshape(datadict['shape'])] = np.nan
-        ppp2[inside.reshape(datadict['shape'])] = _ppp2
+        ppp2 = np.zeros(dat.shape)
+        ppp2[~inside.reshape(dat.shape)] = np.nan
+        ppp2[inside.reshape(dat.shape)] = _ppp2
     elif param == 'jperpphi':
         txt = '$\\mathbf{j}_{\perp,\phi}$'
-        ppp1 = j_perp[2*N:3*N].reshape(datadict['shape'])
-        ppp1[~inside.reshape(datadict['shape'])] = np.nan
+        ppp1 = j_perp[2*N:3*N].reshape(dat.shape)
+        ppp1[~inside.reshape(dat.shape)] = np.nan
         _ppp2 = jjj2[2,:]
-        ppp2 = np.zeros(datadict['shape'])
-        ppp2[~inside.reshape(datadict['shape'])] = np.nan
-        ppp2[inside.reshape(datadict['shape'])] = _ppp2
+        ppp2 = np.zeros(dat.shape)
+        ppp2[~inside.reshape(dat.shape)] = np.nan
+        ppp2[inside.reshape(dat.shape)] = _ppp2
     
     for sliceindex in slices:
         fig = plt.figure(figsize = (30, 10))
         #GEMINI part to the left
         ax = fig.add_subplot(131, projection='3d')
-        visualization.plot_slice(ax, secs_grid, alts_grid, datadict['lat'].reshape(datadict['shape']), 
-                                 datadict['lon'].reshape(datadict['shape']), 
-                                 datadict['alt'].reshape(datadict['shape']), 
+        visualization.plot_slice(ax, secs_grid, alts_grid, dat.lat.reshape(dat.shape), 
+                                 dat.lon.reshape(dat.shape), 
+                                 dat.alt.reshape(dat.shape), 
                                  ppp1, dim = dim, sliceindex = sliceindex, maph=maph, 
                                  parameter=txt + ' from GEMINI', clim=clim, dipole_lompe=geomag)             
         #vi-ve part in middle
         ax = fig.add_subplot(132, projection='3d')
-        visualization.plot_slice(ax, secs_grid, alts_grid, datadict['lat'].reshape(datadict['shape']), 
-                                 datadict['lon'].reshape(datadict['shape']), 
-                                 datadict['alt'].reshape(datadict['shape']), 
+        visualization.plot_slice(ax, secs_grid, alts_grid, dat.lat.reshape(dat.shape), 
+                                 dat.lon.reshape(dat.shape), 
+                                 dat.alt.reshape(dat.shape), 
                                  ppp2, dim = dim, sliceindex = sliceindex, maph=maph, 
                                  parameter=txt + ' estimated with '+savesuff[1:-1], 
                                  clim=clim, dipole_lompe=geomag)            
         #difference in right panel
         ax = fig.add_subplot(133, projection='3d')
-        visualization.plot_slice(ax, secs_grid, alts_grid, datadict['lat'].reshape(datadict['shape']), 
-                                 datadict['lon'].reshape(datadict['shape']), 
-                                 datadict['alt'].reshape(datadict['shape']), 
+        visualization.plot_slice(ax, secs_grid, alts_grid, dat.lat.reshape(dat.shape), 
+                                 dat.lon.reshape(dat.shape), 
+                                 dat.alt.reshape(dat.shape), 
                                  ppp1-ppp2, dim = dim, sliceindex = sliceindex, maph=maph,
                                  parameter='GEMINI - estimate', clim=clim, dipole_lompe=geomag)
         #Colorbar
@@ -110,11 +114,11 @@ def compare_input_jperp(datadict, jjj2, inside, savesuff, secs_grid, alts_grid,
         cb1.ax.tick_params(labelsize=16)
         cb1.ax.xaxis.get_offset_text().set_fontsize(16)
         cb1.set_label('[A/m$^2$]', fontsize=16)
-        if pdf:
-            savename = './comparison_'+param+'_dim='+str(dim)+savesuff+'%03i.pdf' % sliceindex
-        else:
-            savename = './plots/uniform_sampling_slices/comparison_'+param+'_dim='+str(dim)+savesuff+'%03i.png' % sliceindex
-        fig.savefig(savename, dpi=250)
+        # if pdf:
+        #     savename = './comparison_'+param+'_dim='+str(dim)+savesuff+'%03i.pdf' % sliceindex
+        # else:
+        #     savename = './plots/uniform_sampling_slices/comparison_'+param+'_dim='+str(dim)+savesuff+'%03i.png' % sliceindex
+        # fig.savefig(savename, dpi=250)
     if gif:
         import glob
         files = glob.glob('./plots/uniform_sampling_slices/comparison_'+param+'_dim='+str(dim)+savesuff+'*.png')
@@ -458,11 +462,14 @@ def model_amplitude_analysis(grid, alts_grid, m, clim=1e-1, k=47, i = 5, j = 5, 
                                  planes=[2], absolute=False, dipoleB=dipoleB)       
     
 
-def reconsrtruction_performance(datadict, grid, alts_grid, lat_ev, lon_ev, alt_ev, full_j, jpar, dipolekw=True, 
+def reconsrtruction_performance(dat, grid, alts_grid, lat_ev, lon_ev, alt_ev, full_j, jpar, dipolekw=True, 
                                 cut='k', single=None, gif=True, inputmode='vi', clim = 2e-5):
    
     import matplotlib
     N = jpar.size
+    
+    datadict = dat.__dict__
+    
     datadict['jtheta'] = -datadict['jn']
     
     #Make gifs of performance in different slices
@@ -637,7 +644,7 @@ def reconsrtruction_performance(datadict, grid, alts_grid, lat_ev, lon_ev, alt_e
     
 
 
-def scatterplot_reconstruction(grid, alts_grid, datadict, lon, lat, alt, full_j, jpar, 
+def scatterplot_reconstruction(grid, alts_grid, dat, lon, lat, alt, full_j, jpar, 
                                dipolekw=False, inout=False):
     '''
     
@@ -650,7 +657,7 @@ def scatterplot_reconstruction(grid, alts_grid, datadict, lon, lat, alt, full_j,
         Altitude grid to use together with grid. Length is K. Values 
         represent the height in km of the centre of the voxels of each layer. 
         Should be in increasing order.    
-    datadict : dictionary
+    dat : instance of data class
         The GEMINI output in ENU components (in 3D).
     lon : array-like 1D, 
         longitude of evaluation locations, in degrees
@@ -682,8 +689,8 @@ def scatterplot_reconstruction(grid, alts_grid, datadict, lon, lat, alt, full_j,
     if dipolekw:
         mlon_ = np.radians(lon)
         mtheta_ = np.radians(90-lat) 
-        j_gg_enu = np.vstack((datadict['je'], datadict['jn'], datadict['ju'])).T
-        j_gm_enu = gemini_tools.enugg2enugm(j_gg_enu, datadict['lon'], datadict['lat'])
+        j_gg_enu = np.vstack((dat.je, dat.jn, dat.ju)).T
+        j_gm_enu = gemini_tools.enugg2enugm(j_gg_enu, dat.lon, dat.lat)
     else:
         mlon_, mtheta_ = convert.geog2geomag(lon,lat)
     m_theta = np.arcsin(np.sqrt((RE+alts_grid[0])/(RE+alt))*np.sin(mtheta_)) #sjekk - ok!
@@ -696,17 +703,18 @@ def scatterplot_reconstruction(grid, alts_grid, datadict, lon, lat, alt, full_j,
     else:    
         m_glon, m_glat = convert.geomag2geog(m_mlon, m_theta)
         inside = grid.ingrid(m_glon, m_glat, ext_factor=-2)
-        ax.scatter(1e6*datadict['ju'],1e6*full_j[0:N], s=1, label='$\mathbf{j}_r$', color='C0')
-        ax.scatter(-1e6*datadict['jn'],1e6*full_j[N:2*N], s=1, label='$\mathbf{j}_\\theta$', color='C1')
-        ax.scatter(1e6*datadict['je'],1e6*full_j[2*N:3*N], s=1, label='$\mathbf{j}_\phi$', color='C2')
+        print(type(dat))
+        ax.scatter(1e6*dat.ju,1e6*full_j[0:N], s=1, label='$\mathbf{j}_r$', color='C0')
+        ax.scatter(-1e6*dat.jn,1e6*full_j[N:2*N], s=1, label='$\mathbf{j}_\\theta$', color='C1')
+        ax.scatter(1e6*dat.je,1e6*full_j[2*N:3*N], s=1, label='$\mathbf{j}_\phi$', color='C2')
         
     highalt = alt > 200
-    ax.scatter(1e6*datadict['fac'][highalt],1e6*jpar[highalt], s=1, label='FAC>200km', color='C3')
+    ax.scatter(1e6*dat.fac[highalt],1e6*jpar[highalt], s=1, label='FAC>200km', color='C3')
     if inout:
-        ax.scatter(1e6*datadict['fac'][inside],1e6*jpar[inside], s=1, label='FAC_inside', color='C4')
-        ax.scatter(1e6*datadict['fac'][~inside],1e6*jpar[~inside], s=1, label='FAC_outside', color='C5')
-        r_outside = np.corrcoef(1e6*datadict['fac'][~inside],1e6*jpar[~inside])[0,1]
-        r_inside = np.corrcoef(1e6*datadict['fac'][inside],1e6*jpar[inside])[0,1]
+        ax.scatter(1e6*dat.fac[inside],1e6*jpar[inside], s=1, label='FAC_inside', color='C4')
+        ax.scatter(1e6*dat.fac[~inside],1e6*jpar[~inside], s=1, label='FAC_outside', color='C5')
+        r_outside = np.corrcoef(1e6*dat.fac[~inside],1e6*jpar[~inside])[0,1]
+        r_inside = np.corrcoef(1e6*dat.fac[inside],1e6*jpar[inside])[0,1]
         ax.text(0.1,0.3, 'correlation inside: %4.2f' % r_inside, color='C3', transform = ax.transAxes)
         ax.text(0.1,0.2, 'correlation outside: %4.2f' % r_outside, color='C4', transform = ax.transAxes)
     lgnd = ax.legend(frameon=False)
@@ -753,7 +761,7 @@ def scatterplot_reconstruction(grid, alts_grid, datadict, lon, lat, alt, full_j,
 # plt.hist(np.degrees(np.arccos(vdotb/(bmags*vmappedmag))))
 # plt.hist(np.degrees(np.arccos(vdotb0/(bmags*vmappedmag))))    
 
-def scatterplot_lompe(ax, lmodel, datadict, xgdat):
+def scatterplot_lompe(ax, sim, dat, conv):
     '''
     Functionto produce plot of how the lompe fit reproduces the F-region ion drift
     velocities perp to B in GEMINI
@@ -762,13 +770,16 @@ def scatterplot_lompe(ax, lmodel, datadict, xgdat):
     ----------
     ax : matplotlib axis object
         To plot on
-    lmodel : lompe model object
-        Used to describe the modelled convection.
-    datadict : dict
+    sim : instance of simulation class
+        To hold the GEMINI data and grid        
+    dat : instane of data class
         Containing the GEMINI data sampled at the same altitude as the lompe model
-        is represented at.
-    xgdat : tuple
-        First element is the GEMINI grid object, second is the GEMINI data object        
+        is represented at.        
+    conv : instance of convection class
+        Contain lompe representation. conv.data also contain the instance of the
+        data class of the E3D like samples used to make the lompe fit, but also contain
+        all samples also below maph.
+
 
     Returns
     -------
@@ -776,22 +787,22 @@ def scatterplot_lompe(ax, lmodel, datadict, xgdat):
 
     '''
 
-    enugg_vec = gemini_tools.get_E_from_lmodel(lmodel, datadict, xgdat, returnvperp=True).T
+    enugg_vec = conv.get_E_from_lmodel(sim, dat, returnvperp=True).T
     
-    residuals_e = np.linalg.norm(datadict['vperpmappede'] - enugg_vec[:,0])
-    residuals_n = np.linalg.norm(datadict['vperpmappedn'] - enugg_vec[:,1])
-    residuals_u = np.linalg.norm(datadict['vperpmappedu'] - enugg_vec[:,2])
+    residuals_e = np.linalg.norm(dat.vperpmappede - enugg_vec[:,0])
+    residuals_n = np.linalg.norm(dat.vperpmappedn - enugg_vec[:,1])
+    residuals_u = np.linalg.norm(dat.vperpmappedu - enugg_vec[:,2])
     resmag = np.sqrt(residuals_e**2+residuals_n**2+residuals_u**2)
 
            
-    ax.scatter(datadict['vperpmappede'], enugg_vec[:,0], label='$v_\perp$ east', alpha=0.1)
-    ax.scatter(datadict['vperpmappedn'], enugg_vec[:,1], label='$v_\perp$ north', alpha=0.1)
-    ax.scatter(datadict['vperpmappedu'], enugg_vec[:,2], label='$v_\perp$ up', alpha=0.1)
+    ax.scatter(dat.vperpmappede, enugg_vec[:,0], label='$v_\perp$ east', alpha=0.1)
+    ax.scatter(dat.vperpmappedn, enugg_vec[:,1], label='$v_\perp$ north', alpha=0.1)
+    ax.scatter(dat.vperpmappedu, enugg_vec[:,2], label='$v_\perp$ up', alpha=0.1)
     ax.legend(frameon=False)
     # ax.set_xlabel('True value, no noise [m/s]')
     # ax.set_ylabel('Estimate from noisy data [m/s]')
-    minx = np.min(np.hstack((datadict['vperpe'],datadict['vperpn'])))
-    maxx = np.max(np.hstack((datadict['vperpe'],datadict['vperpn'])))
+    minx = np.min(np.hstack((dat.vperpe,dat.vperpn)))
+    maxx = np.max(np.hstack((dat.vperpe,dat.vperpn)))
     miny = np.min(np.hstack((enugg_vec[:,0],enugg_vec[:,1])))
     maxy = np.max(np.hstack((enugg_vec[:,0],enugg_vec[:,1])))
     # minx = -1900
@@ -833,10 +844,12 @@ def scatterplot_lompe(ax, lmodel, datadict, xgdat):
     
     return ax
 
-def snr_output_plot(covar_j, meshgrid, datadict, grid, alts_grid, Cmpost, clim=2e-5, 
+def snr_output_plot(covar_j, meshgrid, dat, grid, alts_grid, Cmpost, clim=2e-5, 
                     cut='j', ind=5, transmitter=('ski_mod', 67.5, 23.7), 
                     receivers=[('ski_mod', 67.5, 23.7),
                      ('krs_mod', 66.55, 25.92), ('kai_mod', 66.48, 22.54)]):
+
+    datadict = dat.__dict__
 
     # ind = 5 # slice index to show
     # cut = 'k' # slice dimension

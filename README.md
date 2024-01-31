@@ -14,7 +14,7 @@ brew install rust
 brew install r  
 
 ### Setting up dediated environment
-mamba create -n e3dsecs python=3.12 fortran-compiler pip ipython imageio  
+mamba create -n e3dsecs python=3.12 fortran-compiler pip ipython imageio cmake  
 mamba activate e3dsecs  
 
 ### Python packages
