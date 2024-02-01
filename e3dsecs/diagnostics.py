@@ -87,7 +87,8 @@ def compare_input_jperp(dat, jjj2, inside, savesuff, secs_grid, alts_grid,
                                  dat.lon.reshape(dat.shape), 
                                  dat.alt.reshape(dat.shape), 
                                  ppp1, dim = dim, sliceindex = sliceindex, maph=maph, 
-                                 parameter=txt + ' from GEMINI', clim=clim, dipole_lompe=geomag)             
+                                 parameter=txt + ' from GEMINI', clim=clim, dipole_lompe=geomag,
+                                 coastlines=False)
         #vi-ve part in middle
         ax = fig.add_subplot(132, projection='3d')
         visualization.plot_slice(ax, secs_grid, alts_grid, dat.lat.reshape(dat.shape), 
@@ -95,14 +96,15 @@ def compare_input_jperp(dat, jjj2, inside, savesuff, secs_grid, alts_grid,
                                  dat.alt.reshape(dat.shape), 
                                  ppp2, dim = dim, sliceindex = sliceindex, maph=maph, 
                                  parameter=txt + ' estimated with '+savesuff[1:-1], 
-                                 clim=clim, dipole_lompe=geomag)            
+                                 clim=clim, dipole_lompe=geomag, coastlines=False)            
         #difference in right panel
         ax = fig.add_subplot(133, projection='3d')
         visualization.plot_slice(ax, secs_grid, alts_grid, dat.lat.reshape(dat.shape), 
                                  dat.lon.reshape(dat.shape), 
                                  dat.alt.reshape(dat.shape), 
                                  ppp1-ppp2, dim = dim, sliceindex = sliceindex, maph=maph,
-                                 parameter='GEMINI - estimate', clim=clim, dipole_lompe=geomag)
+                                 parameter='GEMINI - estimate', clim=clim, dipole_lompe=geomag,
+                                 coastlines=False)
         #Colorbar
         cbarax = plt.axes((0.37,0.2,0.3,0.02))
         # cbarax = plt.subplot2grid((1,3), (0, 1), rowspan = 1, colspan = 1)
@@ -281,7 +283,7 @@ def plot_analysis_grid(datadict, grid, alts_grid, lat_ev, lon_ev, alt_ev, dipole
     ax.view_init(azim=-26, elev=7)
     if boxgrid:
         visualization.spherical_grid(ax, lat_ev, lon_ev, alt_ev, color='blue', maph=datadict['maph'])
-    visualization.field_aligned_grid(ax, grid, alts_grid, color='green', dipoleB=dipole_lompe)
+    visualization.field_aligned_grid(ax, grid, alts_grid, color='green', dipoleB=dipole_lompe, coastlines=False)
     kwargs={'linewidth':3}
     # cmap = plt.cm.bwr
     # clim = 2e-5
@@ -318,9 +320,7 @@ def plot_analysis_grid(datadict, grid, alts_grid, lat_ev, lon_ev, alt_ev, dipole
         lon_, lat_ = geomag2geog(np.radians(grid.projection.position[0]), np.pi/2 - np.radians(grid.projection.position[1])) # returns in degrees
         x0, y0, z0 = coordinates.sph_to_car((RE+0, 90-lat_, lon_), deg=True)
     else:
-        x0, y0, z0 = coordinates.sph_to_car((RE+0, 90-grid.projection.position[1], grid.projection.position[0]), deg=True)
-    range_ =  alts_grid[-1]*0.3
-    
+        x0, y0, z0 = coordinates.sph_to_car((RE+0, 90-grid.projection.position[1], grid.projection.position[0]), deg=True)   
     # if eiscatfov:
     #     lat0 = datadict['lat'][::_d][12:-3]
     #     lon0 = datadict['lon'][::_d][12:-3]
@@ -329,11 +329,23 @@ def plot_analysis_grid(datadict, grid, alts_grid, lat_ev, lon_ev, alt_ev, dipole
     #     lon1 = datadict['lon'][_d-1:][::_d][12:-3]
     #     alt1 = datadict['alt'][_d-1:][::_d][12:-3]
     #     visualization.plot_e3dfov(ax, lat0, lon0, alt0, lat1, lon1, alt1, **kwargs)
-        
     
-    ax.set_xlim(x0-range_, x0+range_)
-    ax.set_ylim(y0-range_, y0+range_)
-    ax.set_zlim(z0, z0+2*range_)
+    # Fix viewing geometry
+    lat_ = grid.projection.position[1] # in degrees
+    lon_ = grid.projection.position[0] # in degrees
+    L = grid.L*1e-3
+    Lres = grid.Lres*1e-3
+    x_, y_, z_ = coordinates.sph_to_car((RE, 90-lat_, lon_), deg=True)
+    xlim = (x_[0]-L+5*Lres, x_[0]+L-3*Lres) 
+    ylim = (y_[0]-L+6*Lres, y_[0]+L-3*Lres) 
+    zlim = (z_[0]+ 0.15*alts_grid[-1], z_[0]+ 0.75*alts_grid[-1])
+    ax.set_xlim(xlim)
+    ax.set_ylim(ylim)
+    ax.set_zlim(zlim)             
+    # range_ =  alts_grid[-1]*0.3    
+    # ax.set_xlim(x0-range_, x0+range_)
+    # ax.set_ylim(y0-0.5*range_, y0+range_)
+    # ax.set_zlim(z0+0.5*range_, z0+2.5*range_)
     ax.set_title(q + ' from GEMINI')
     #########################
     
@@ -504,7 +516,8 @@ def reconsrtruction_performance(dat, grid, alts_grid, lat_ev, lon_ev, alt_ev, fu
             ax.set_axis_off()
             ax.view_init(azim=-26, elev=7)
             # visualization.spherical_grid(ax, lat_ev, lon_ev, alt_ev, color='blue')
-            visualization.field_aligned_grid(ax, grid, alts_grid, color='green', dipoleB=dipolekw, **kwargs)
+            visualization.field_aligned_grid(ax, grid, alts_grid, color='green', dipoleB=dipolekw,
+                                             coastlines=False,**kwargs)
             for kk in range(lat_ev[0,-1,:].size):
                 visualization.plot_field_line(ax, lat_ev[0,-1,kk], lon_ev[0,-1,kk], 
                                           alts_grid, color='orange', **kwargs, dipoleB=dipolekw)
@@ -530,10 +543,24 @@ def reconsrtruction_performance(dat, grid, alts_grid, lat_ev, lon_ev, alt_ev, fu
                 x0, y0, z0 = coordinates.sph_to_car((RE+0, 90-lat_, lon_), deg=True)
             else:
                 x0, y0, z0 = coordinates.sph_to_car((RE+0, 90-grid.projection.position[1], grid.projection.position[0]), deg=True)
-            range_ =  alts_grid[-1]*0.3
-            ax.set_xlim(x0-range_, x0+range_)
-            ax.set_ylim(y0-range_, y0+range_)
-            ax.set_zlim(z0, z0+2*range_)
+            # Fix viewing geometry
+            lat_ = grid.projection.position[1] # in degrees
+            lon_ = grid.projection.position[0] # in degrees
+            L = grid.L*1e-3
+            Lres = grid.Lres*1e-3
+            x_, y_, z_ = coordinates.sph_to_car((RE, 90-lat_, lon_), deg=True)
+            xlim = (x_[0]-L+5*Lres, x_[0]+L-3*Lres) 
+            ylim = (y_[0]-L+6*Lres, y_[0]+L-3*Lres) 
+            zlim = (z_[0]+ 0.15*alts_grid[-1], z_[0]+ 0.75*alts_grid[-1])
+            ax.set_xlim(xlim)
+            ax.set_ylim(ylim)
+            ax.set_zlim(zlim)             
+            
+            # range_ =  alts_grid[-1]*0.3
+            # ax.set_xlim(x0-range_, x0+range_)
+            # ax.set_ylim(y0-range_, y0+range_)
+            # ax.set_zlim(z0, z0+2*range_)
+            
             ax.set_title(plot_titles[pp], fontsize=16)
             
             if pp==2:
@@ -549,7 +576,8 @@ def reconsrtruction_performance(dat, grid, alts_grid, lat_ev, lon_ev, alt_ev, fu
             ax.set_axis_off()
             ax.view_init(azim=-26, elev=7)
             # visualization.spherical_grid(ax, lat_ev, lon_ev, alt_ev, color='blue') #Data locations
-            visualization.field_aligned_grid(ax, grid, alts_grid, color='green', dipoleB=dipolekw, **kwargs) # Base SECS grid
+            visualization.field_aligned_grid(ax, grid, alts_grid, color='green', dipoleB=dipolekw, 
+                                             coastlines=False, **kwargs) # Base SECS grid
             # for kk in range(lat.reshape(shape)[0,-1,:].size): # Plot some field-lines
             #     visualization.plot_field_line(ax2, lat_ev.reshape(shape)[0,-1,kk], 
             #                 lon_ev.reshape(shape)[0,-1,kk], alt_ev.reshape(shape)[:,-1,0], 
@@ -590,10 +618,24 @@ def reconsrtruction_performance(dat, grid, alts_grid, lat_ev, lon_ev, alt_ev, fu
                 x0, y0, z0 = coordinates.sph_to_car((RE+0, 90-lat_, lon_), deg=True)
             else:
                 x0, y0, z0 = coordinates.sph_to_car((RE+0, 90-grid.projection.position[1], grid.projection.position[0]), deg=True)
-            range_ =  alts_grid[-1]*0.3
-            ax.set_xlim(x0-range_, x0+range_)
-            ax.set_ylim(y0-range_, y0+range_)
-            ax.set_zlim(z0, z0+2*range_)
+
+            # Fix viewing geometry
+            lat_ = grid.projection.position[1] # in degrees
+            lon_ = grid.projection.position[0] # in degrees
+            L = grid.L*1e-3
+            Lres = grid.Lres*1e-3
+            x_, y_, z_ = coordinates.sph_to_car((RE, 90-lat_, lon_), deg=True)
+            xlim = (x_[0]-L+5*Lres, x_[0]+L-3*Lres) 
+            ylim = (y_[0]-L+6*Lres, y_[0]+L-3*Lres) 
+            zlim = (z_[0]+ 0.15*alts_grid[-1], z_[0]+ 0.75*alts_grid[-1])
+            ax.set_xlim(xlim)
+            ax.set_ylim(ylim)
+            ax.set_zlim(zlim)             
+
+            # range_ =  alts_grid[-1]*0.3
+            # ax.set_xlim(x0-range_, x0+range_)
+            # ax.set_ylim(y0-range_, y0+range_)
+            # ax.set_zlim(z0, z0+2*range_)
             ax.set_title(plot_titles[pp], fontsize=16)
             
             if pp==2:
@@ -844,7 +886,7 @@ def scatterplot_lompe(ax, sim, dat, conv):
     
     return ax
 
-def snr_output_plot(covar_j, meshgrid, dat, grid, alts_grid, Cmpost, clim=2e-5, 
+def snr_output_plot(covar_j, meshgrid, dat, grid, alts_grid, clim=2e-5, 
                     cut='j', ind=5, transmitter=('ski_mod', 67.5, 23.7), 
                     receivers=[('ski_mod', 67.5, 23.7),
                      ('krs_mod', 66.55, 25.92), ('kai_mod', 66.48, 22.54)]):
@@ -908,9 +950,9 @@ def snr_output_plot(covar_j, meshgrid, dat, grid, alts_grid, Cmpost, clim=2e-5,
         # noise_cf = np.sqrt(np.diag(Cmpost[0:KIJ,:KIJ]).reshape((K,I,J)))
         # noise_df = np.sqrt(np.diag(Cmpost[1*KIJ:2*KIJ,1*KIJ:2*KIJ]).reshape((K,I,J)))
         ax2 = axs2[pp]
-        ax = visualization.field_aligned_grid(ax, grid, alts_grid, color='green', dipoleB=False, **kwargs)
+        ax = visualization.field_aligned_grid(ax, grid, alts_grid, color='green', dipoleB=False, **kwargs, coastlines=False)
         ax.set_title(plot_titles[pp], fontsize=16)
-        ax2 = visualization.field_aligned_grid(ax2, grid, alts_grid, color='green', dipoleB=False, **kwargs)
+        ax2 = visualization.field_aligned_grid(ax2, grid, alts_grid, color='green', dipoleB=False, **kwargs, coastlines=False)
         ax2.set_title(plot_titles2[pp], fontsize=16)
         if pp==2:
             x_, y_, z_ = coordinates.sph_to_car((RE+0, 90-74, 37), deg=True)
@@ -919,7 +961,7 @@ def snr_output_plot(covar_j, meshgrid, dat, grid, alts_grid, Cmpost, clim=2e-5,
         if type(cut) == str:
             ax = visualization.plotslice(ax,(alt_ev,lat_ev,lon_ev), noise, cut=cut, ind=ind, clim=clim)
             ax2 = visualization.plotslice(ax2,(alt_ev,lat_ev,lon_ev), np.abs(signal)/noise, cut=cut, 
-                                     ind=ind, clim=1, diverging=True, cmap='viridis')  
+                                     ind=ind, clim=5, diverging=False, cmap='viridis')  
         else:
             for ii, c in enumerate(cut):
                 ax = visualization.plotslice(ax,(alt_ev,lat_ev,lon_ev), noise, cut=c, ind=ind[ii], clim=clim)
@@ -932,12 +974,13 @@ def snr_output_plot(covar_j, meshgrid, dat, grid, alts_grid, Cmpost, clim=2e-5,
                 x_, y_, z_ = coordinates.sph_to_car((RE+alts, 90-glats, glons), deg=True)
                 ax.scatter(x_, y_, z_, marker='*', c=['C0', 'C2', 'C1'])
                 ax2.scatter(x_, y_, z_, marker='*', c=['C0', 'C2', 'C1'])
-                if (c=='k') & (pp==2):
-                    alt = int(alt_ev[ind[ii],0,0])
-                    # glon, glat = geomag2geog(np.radians(grid.lon[-1,0]), np.radians(90-grid.lat[-1,0]))
-                    x_, y_, z_ = coordinates.sph_to_car((RE+alt, 90-grid.lat[-1,0]-0.4, grid.lon[-1,0]), deg=True)
-                    ax.text(x_[0], y_[0], z_[0], str(alt)+' km', fontsize=10)
-                    ax2.text(x_[0], y_[0], z_[0], str(alt)+' km', fontsize=10)
+                # Print height of hor cuts
+                # if (c=='k') & (pp==2):
+                #     alt = int(alt_ev[ind[ii],0,0])
+                #     # glon, glat = geomag2geog(np.radians(grid.lon[-1,0]), np.radians(90-grid.lat[-1,0]))
+                #     x_, y_, z_ = coordinates.sph_to_car((RE+alt, 90-grid.lat[-1,0]-0.4, grid.lon[-1,0]), deg=True)
+                #     ax.text(x_[0], y_[0], z_[0], str(alt)+' km', fontsize=10)
+                #     ax2.text(x_[0], y_[0], z_[0], str(alt)+' km', fontsize=10)
                     
                 
     # Colorbar SNR
@@ -965,3 +1008,116 @@ def snr_output_plot(covar_j, meshgrid, dat, grid, alts_grid, Cmpost, clim=2e-5,
     return fig
     
     # fig.savefig('./3d_uncertainty.pdf',bbox_inches='tight', dpi=300)
+    
+
+def performance_plot(reconstructed_j, meshgrid, dat, grid, alts_grid, clim=2e-5, 
+                    cut='j', ind=5, transmitter=('ski_mod', 67.5, 23.7), 
+                    receivers=[('ski_mod', 67.5, 23.7),
+                     ('krs_mod', 66.55, 25.92), ('kai_mod', 66.48, 22.54)]):
+
+    # Function that make a plot of reconstructed j and compare with ground truth
+    # from GEMINI. This function is on the same form as the SNR plot function above
+
+
+    datadict = dat.__dict__
+
+    # ind = 5 # slice index to show
+    # cut = 'k' # slice dimension
+
+    alt_ev = meshgrid[0]
+    lat_ev = meshgrid[1]
+    lon_ev = meshgrid[2]
+    
+    # Native 3D SECS grid
+    alt_ev_, eta_ev_, xi_ev_ = np.meshgrid(alts_grid, grid.eta[:,0], grid.xi[0,:], indexing='ij')    
+    lon_ev_, lat_ev_ = grid.projection.cube2geo(xi_ev_, eta_ev_)
+    lon_ev_, lat_ev_ = geomag2geog(np.radians(lon_ev_), np.radians(90-lat_ev_))
+
+
+    N = reconstructed_j.shape[0] // 3
+    K = alts_grid.size
+    I = grid.shape[0]
+    J = grid.shape[1]
+    KIJ = K*I*J
+
+    # Convert current densiry to dipole components: Not needed anymore since we now 
+    # do evertyhing in geographic components/coordinates
+    # jgg_enu = np.vstack((datadict['je'],datadict['jn'], datadict['ju'])).T
+    # jgm_enu = secs3d.gemini_tools.enugg2enugm(jgg_enu, datadict['mappedglon'], \
+    #         datadict['mappedglat']) # Convert ion perp velocity (local ENU) from geographic to geomag components    
+    # datadict['je_gm'] = jgm_enu[:,0]
+    # datadict['jn_gm'] = jgm_enu[:,1]
+    # datadict['ju_gm'] = jgm_enu[:,2]
+    fig = plt.figure(figsize=(15,10))
+    
+    # Top row showing 3D reconstruction uncertainties. Bottom row show SNR
+    ax3 = plt.subplot2grid((20, 32), (0, 0), rowspan = 10, colspan = 10, projection='3d')
+    ax2 = plt.subplot2grid((20, 32), (0, 10), rowspan = 10, colspan = 10, projection='3d')
+    ax1 = plt.subplot2grid((20, 32), (0, 20), rowspan = 10, colspan = 10, projection='3d')
+    axs = [ax1,ax2,ax3]
+    ax6 = plt.subplot2grid((20, 32), (10, 0), rowspan = 10, colspan = 10, projection='3d')
+    ax5 = plt.subplot2grid((20, 32), (10, 10), rowspan = 10, colspan = 10, projection='3d')
+    ax4 = plt.subplot2grid((20, 32), (10, 20), rowspan = 10, colspan = 10, projection='3d')
+    axs2 = [ax4,ax5,ax6] 
+    plotparams = ['je', 'jn','ju']
+    plot_titles2 = ['$\\mathbf{j}_{\phi}$', '$\\mathbf{j}_{\\theta}$', '$\\mathbf{j}_{r}$']
+    kwargs={'linewidth':1}
+    plot_titles = ['$\mathbf{j}_{\phi}$', '$\mathbf{j}_{\\theta}$', '$\mathbf{j}_{r}$']
+    
+    for pp, ax in enumerate(axs):
+        if pp == 0:
+            pp2 = 2
+        elif pp == 1:
+            pp2 = 1
+        elif pp ==2:
+            pp2 = 0
+        _j = reconstructed_j[pp2*N:(pp2+1)*N].reshape(alt_ev.shape)
+        signal = datadict[plotparams[pp]].reshape(alt_ev.shape)
+        if pp == 1:
+            signal = -signal
+
+        # noise_cf = np.sqrt(np.diag(Cmpost[0:KIJ,:KIJ]).reshape((K,I,J)))
+        # noise_df = np.sqrt(np.diag(Cmpost[1*KIJ:2*KIJ,1*KIJ:2*KIJ]).reshape((K,I,J)))
+        ax2 = axs2[pp]
+        ax = visualization.field_aligned_grid(ax, grid, alts_grid, color='green', dipoleB=False, **kwargs, coastlines=False)
+        ax.set_title(plot_titles[pp], fontsize=16)
+        ax2 = visualization.field_aligned_grid(ax2, grid, alts_grid, color='green', dipoleB=False, **kwargs, coastlines=False)
+        ax2.set_title(plot_titles2[pp], fontsize=16)
+        if pp==2:
+            x_, y_, z_ = coordinates.sph_to_car((RE+0, 90-74, 37), deg=True)
+            ax.text(x_[0], y_[0], z_[0], 'GEMINI', fontsize=16, zorder=10)
+            ax2.text(x_[0], y_[0], z_[0], '3D reconstruction', fontsize=16, zorder=10)
+        if type(cut) == str:
+            ax = visualization.plotslice(ax,(alt_ev,lat_ev,lon_ev), signal, cut=cut, ind=ind, clim=clim)
+            ax2 = visualization.plotslice(ax2,(alt_ev,lat_ev,lon_ev), _j, cut=cut, clim=clim) 
+        else:
+            for ii, c in enumerate(cut):
+                ax = visualization.plotslice(ax,(alt_ev,lat_ev,lon_ev), signal, cut=c, ind=ind[ii], clim=clim)
+                ax2 = visualization.plotslice(ax2,(alt_ev,lat_ev,lon_ev), _j, cut=c, ind=ind[ii], clim=clim)
+                # Plot the radar site locations
+                alts = np.ones(3)*0.01
+                glats = np.array([receivers[0][1], receivers[1][1], receivers[2][1]])
+                glons = np.array([receivers[0][2], receivers[1][2], receivers[2][2]])
+                x_, y_, z_ = coordinates.sph_to_car((RE+alts, 90-glats, glons), deg=True)
+                ax.scatter(x_, y_, z_, marker='*', c=['C0', 'C2', 'C1'])
+                ax2.scatter(x_, y_, z_, marker='*', c=['C0', 'C2', 'C1'])
+                # Print alatitude of hor cuts
+                # if (c=='k') & (pp==2):
+                #     alt = int(alt_ev[ind[ii],0,0])
+                #     # glon, glat = geomag2geog(np.radians(grid.lon[-1,0]), np.radians(90-grid.lat[-1,0]))
+                #     x_, y_, z_ = coordinates.sph_to_car((RE+alt, 90-grid.lat[-1,0]-0.4, grid.lon[-1,0]), deg=True)
+                #     ax.text(x_[0], y_[0], z_[0], str(alt)+' km', fontsize=10)
+                #     ax2.text(x_[0], y_[0], z_[0], str(alt)+' km', fontsize=10)
+                
+    # Colorbar
+    cbarax = plt.subplot2grid((20,32), (5, 31), rowspan = 10, colspan = 1)
+    cmap = plt.cm.bwr
+    import matplotlib as mpl
+    norm = mpl.colors.Normalize(vmin=-clim, vmax=clim)
+    cb1 = mpl.colorbar.ColorbarBase(cbarax, cmap=cmap,
+                                norm=norm,
+                                orientation='vertical')
+    cb1.set_label('[A/m$^2$]', fontsize=16)
+    cb1.ax.yaxis.set_label_coords(-1.3, 0.5)            
+    
+    return fig    

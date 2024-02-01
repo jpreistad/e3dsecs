@@ -203,7 +203,7 @@ def plot_hor_segment(ax, mlons, mlats, alt, color='green', dipoleB=False, **kwar
 
 def field_aligned_grid(ax, grid, alts_grid, color='green', showlayers=False, 
                        showbase=True, fullbox=False, verticalcorners=False, 
-                       dipoleB=False, **kwargs):
+                       dipoleB=False, coastlines=True, **kwargs):
     '''
     Make 3D plot of volume spanned by CS grid following a field line from its
     central location
@@ -243,15 +243,16 @@ def field_aligned_grid(ax, grid, alts_grid, color='green', showlayers=False,
     ylim = (y_[0]-L-10*Lres, y_[0]+L+10*Lres) 
     zlim = (RE, RE+alts_grid[-1]+1)
     zlim = (z_[0], z_[0]+ alts_grid[-1])
-    #Plot coastlines in ecef frame
-    datapath=polplot.__path__[0]+'/data/'
-    resolution = '50m' #or '110m'
-    coastlines = np.load(datapath + 'coastlines_' + resolution + '.npz')
-    for cl in coastlines:
-        lat, lon = coastlines[cl]
-        x,y,z = coordinates.sph_to_car((RE, 90-lat, lon), deg=True)
-        use = (x > xlim[0]-L/2) & (x < xlim[1]+L/2) & (y > ylim[0]-L/2) & (y < ylim[1]+L/2) & (z > 0)
-        ax.plot(x[use], y[use], z[use], color = 'C0', **kwargs)
+    if coastlines:
+        #Plot coastlines in ecef frame
+        datapath=polplot.__path__[0]+'/data/'
+        resolution = '50m' #or '110m'
+        _coastlines = np.load(datapath + 'coastlines_' + resolution + '.npz')
+        for cl in _coastlines:
+            lat, lon = _coastlines[cl]
+            x,y,z = coordinates.sph_to_car((RE, 90-lat, lon), deg=True)
+            use = (x > xlim[0]-L/2) & (x < xlim[1]+L/2) & (y > ylim[0]-L/2) & (y < ylim[1]+L/2) & (z > 0)
+            ax.plot(x[use], y[use], z[use], color = 'C0', **kwargs)
         
     ax.set_xlim(xlim)
     ax.set_ylim(ylim)
@@ -294,9 +295,14 @@ def field_aligned_grid(ax, grid, alts_grid, color='green', showlayers=False,
             # mlat_, mlon_ = apex.geo2apex(glat_, glon_, alt)
             # mlats = np.vstack((mlats, mlat_[np.newaxis]))
             # mlons = np.vstack((mlons, mlon_[np.newaxis]))
+            counter = 0
             for lon, lat in get_grid_boundaries(glon_, glat_, grid.NL, grid.NW):
-                x,y,z = coordinates.sph_to_car((RE+alt, 90-lat, lon), deg=True)
-                ax.plot(x, y, z, color = 'grey', linewidth = .4)
+                if (counter==0) or (counter==grid.NL) or (counter==grid.NL+1) or (counter==grid.NL+grid.NW+1):
+                    x1,y1,z1 = coordinates.sph_to_car((RE+alt, 90-lat[0], lon[0]), deg=True)
+                    x2,y2,z2 = coordinates.sph_to_car((RE+alt, 90-lat[-1], lon[-1]), deg=True)
+                    ax.plot([x1, x2], [y1, y2], [z1, z2], color='grey', linewidth=0.4)                
+                counter = counter + 1
+                    # ax.plot(x, y, z, color = 'grey', linewidth = .4)
         
 
     
@@ -336,6 +342,19 @@ def field_aligned_grid(ax, grid, alts_grid, color='green', showlayers=False,
         x0,y0,z0 = coordinates.sph_to_car((RE+alts_grid[0], 90-grid.lat_mesh[-1,-1], grid.lon_mesh[-1,-1]), deg=True)
         x1,y1,z1 = coordinates.sph_to_car((RE+alts_grid[-1], 90-grid.lat_mesh[-1,-1], grid.lon_mesh[-1,-1]), deg=True)
         ax.plot([x0[0],x1[0]],[y0[0],y1[0]],[z0[0],z1[0]], color='black', linestyle='dotted')
+    
+    # Plot vertical height scale
+    alts = np.array([0,100,200,300,400,500])
+    N = len(alts)
+    lats = np.array([grid.lat_mesh[-1,0]]*N)
+    lons = np.array([grid.lon_mesh[-1,0]]*N)
+    L = grid.L*1e-3
+    Lres = grid.Lres*1e-3
+    pos = grid.projection.position
+    x_, y_, z_ = coordinates.sph_to_car((RE+alts, 90-lats, lons), deg=True)
+    ax.plot(x_, y_, z_, color='black', zorder=100)
+    for (ii,aa) in enumerate(alts):
+        ax.text(x_[ii], y_[ii], z_[ii], str(aa)+' km', ha='right', zorder=100, clip_on=True)
     
     return ax
 
@@ -596,7 +615,7 @@ def plot_resolution(ax, grid, alts_grid, kij, psf, az=-26, el=7, clim=1e-6,
         
 def plot_slice(ax, grid, alts_grid, lat, lon, alt, data, clim = 5e-5, azim=-20, 
                elev=7, dipole_lompe=True, dim = 0, sliceindex = 0, parameter='No name', 
-               maph=None):
+               maph=None, coastlines=True):
     '''
     Plot a slice on a 3D plot of a choosen quantity from a data-cube
     
@@ -630,7 +649,7 @@ def plot_slice(ax, grid, alts_grid, lat, lon, alt, data, clim = 5e-5, azim=-20,
     ax.set_axis_off()
     ax.view_init(azim=azim, elev=elev)
     # spherical_grid(ax, lat, lon, alt, color='blue')
-    field_aligned_grid(ax, grid, alts__, color='green', dipoleB=dipole_lompe)
+    field_aligned_grid(ax, grid, alts__, color='green', dipoleB=dipole_lompe, coastlines=coastlines)
     kwargs={'linewidth':3}
     for kk in range(lat[0,-1,:].size):
         plot_field_line(ax, lat[0,-1,kk], lon[0,-1,kk], 
@@ -675,10 +694,22 @@ def plot_slice(ax, grid, alts_grid, lat, lon, alt, data, clim = 5e-5, azim=-20,
         x0, y0, z0 = coordinates.sph_to_car((RE+0, 90-lat_, lon_), deg=True)
     else:
         x0, y0, z0 = coordinates.sph_to_car((RE+0, 90-grid.projection.position[1], grid.projection.position[0]), deg=True)
-    range_ =  alts__[-1]*0.3
-    ax.set_xlim(x0-range_, x0+range_)
-    ax.set_ylim(y0-range_, y0+range_)
-    ax.set_zlim(z0, z0+2*range_)
+    # Fix viewing geometry
+    lat_ = grid.projection.position[1] # in degrees
+    lon_ = grid.projection.position[0] # in degrees
+    L = grid.L*1e-3
+    Lres = grid.Lres*1e-3
+    x_, y_, z_ = coordinates.sph_to_car((RE, 90-lat_, lon_), deg=True)
+    xlim = (x_[0]-L+5*Lres, x_[0]+L-3*Lres) 
+    ylim = (y_[0]-L+6*Lres, y_[0]+L-3*Lres) 
+    zlim = (z_[0]+ 0.15*alts_grid[-1], z_[0]+ 0.75*alts_grid[-1])
+    ax.set_xlim(xlim)
+    ax.set_ylim(ylim)
+    ax.set_zlim(zlim)      
+    # range_ =  alts__[-1]*0.3    
+    # ax.set_xlim(x0-range_, x0+range_)
+    # ax.set_ylim(y0-range_, y0+range_)
+    # ax.set_zlim(z0, z0+2*range_)
     ax.set_title(parameter, fontsize=22)
         
 
