@@ -11,7 +11,7 @@ class data:
     def __init__(self, grid, simulation, beams=True, sitelat=67.36, sitephi=23.,
                  az=None, el=None, uniformmesh=False, lat_ev=None, lon_ev=None, 
                  alt_ev=None, e3doubt_=True, intsec = 5*60, min_alt=90, 
-                 max_alt=500, dr=4) -> None:
+                 max_alt=500, dr=4, tempfile='datadict_temp.npy') -> None:
         """_summary_
 
         Args:
@@ -34,12 +34,12 @@ class data:
             
         if e3doubt_:
             try: #Try to use an existing file, since the e3doubt calculations take a while
-                loaded = np.load('./inversion_coefs/datadict_temp.npy', allow_pickle=True).item()
+                loaded = np.load('./inversion_coefs/'+tempfile, allow_pickle=True).item()
                 # Copy attributes from the loaded object to self
                 self.__dict__.update(loaded.__dict__)               
                 print('Using existing sampling file with estimated variances from E3DOUBT')
             except:            
-                self.get_variances()
+                self.get_variances(tempfile=tempfile)
             self.add_noise()
         
             
@@ -339,7 +339,7 @@ class data:
         # selfdict['l_hor_n'] = l_enu[:,1]/hormag
     
     
-    def get_variances(self):
+    def get_variances(self, tempfile='datadict_temp.npy'):
         dlat = 69.39- self.sitelat
         dlon = 20.27 - self.sitephi
         lats0 = np.array([69.39, 68.44, 68.37])
@@ -355,7 +355,7 @@ class data:
         
         self.get_datacov_e3doubt(transmitter=transmitter, receivers=receivers)
         self.remove_bad()
-        np.save('./inversion_coefs/datadict_temp.npy', self)
+        np.save('./inversion_coefs/'+tempfile, self)
         
     
     def get_datacov_e3doubt(self, transmitter=('ski_mod', 67.2,23.7), 

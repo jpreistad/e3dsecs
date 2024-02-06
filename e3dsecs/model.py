@@ -14,7 +14,7 @@ class model:
     def __init__(self, grid, inputmode='vi', 
                 factop=True, vert_profile=150, vert_dprofile=False, l1=1e-2,
                 diagnostic=False, overwrite=False, crossval=False, 
-                e3doubt_ = False) -> None:
+                e3doubt_ = False, suff='') -> None:
         '''
         grid : instance of grid class object
             Contains the grids we use to compute gridded indices of data/evaluation locations
@@ -57,12 +57,14 @@ class model:
         e3doubt_ : boolean
             Specify if covariances from E3D is estimated and to be used in the inversion.
             The default is False
+        suff : str
+            suffix to add to coef filename to distinguish it
         '''            
         
         
         # Define filename and see if it exists
         filename = self.make_filename(grid.grid.projection.position, inputmode, 
-                            factop=factop, vert_profile=vert_profile)
+                            factop=factop, vert_profile=vert_profile, suff=suff)
         
         # Set keyword attributes
         self.filename = filename
@@ -145,7 +147,7 @@ class model:
         GTds = []
         
         if d.size > 0:
-            br, btheta, bphi = self.make_b_unitvectors(inputdict['Bu'],inputdict['Bn'],
+            br, btheta, bphi = self.make_b_unitvectors(inputdict['Bu'],-inputdict['Bn'],
                                                 inputdict['Be'])
             B = self.make_B(br, btheta, bphi)
             G = self.make_G(grid.grid, grid.alts_grid, inputdict['lat'], inputdict['lon'], 
@@ -356,7 +358,7 @@ class model:
         print('Saved coefficient file.')
 
    
-    def make_filename(self, position, inputmode, factop=False, vert_profile=False):
+    def make_filename(self, position, inputmode, factop=False, vert_profile=False, suff=''):
         '''
         Make the filenames of the coefficient and lompe model files    
 
@@ -371,6 +373,8 @@ class model:
         vert_profile : None or int
             If a specific vertical profile of Hall and Pedersen currents are
             encouraged.
+        suff : str
+            suffix to add to coef filename to distinguish it
 
         Returns
         -------
@@ -394,6 +398,8 @@ class model:
             sss = sss+'_no_vert_profile'
         else:
             sss = sss + '_vert_profile'
+        
+        sss = sss + suff
 
         filename = './inversion_coefs/3Dreconstruction'+sss+'_%4.2f_%4.2f.npy' % \
                     (position[0],position[1])
@@ -1991,4 +1997,113 @@ class model:
         plt.xlabel('l1')
         plt.ylabel('residual norm')   
         
-        return (resnorm, modelnorm, ls)    
+        return (resnorm, modelnorm, ls)
+    
+    
+    def calc_u(self, dat, conv, sim, jperp):
+        """
+        Function that calculates the neutral wind at each grid point based on the modelled jperp.
+        Using Ohms law, and the E-field provided by the Lomope fit, mapped to each location in dat.
+        
+        The solution of Ohms law for u is obtained with Sympy in the as follows:
+        
+        from sympy import symbols, Eq, solve, collect, expand
+        from sympy.vector import CoordSys3D
+
+        # Define vectors and symbols
+        N = CoordSys3D('N')
+        Ue, Un, Uu, sp, sh = symbols('Ue Un Uu sp sh')
+        Ee, En, Eu = symbols('Ee En Eu')
+        Be, Bn, Bu = symbols('Be Bn Bu')
+        be, bn, bu = symbols('be bn bu')
+
+        # Define vectors in terms of components
+        E = Ee*N.i + En*N.j + Eu*N.k
+        B = Be*N.i + Bn*N.j + Bu*N.k
+        b = be*N.i + bn*N.j + bu*N.k
+        U = Ue*N.i + Un*N.j + Uu*N.k
+
+        # Define the vector equation
+        J = sp*(E + U.cross(B)) + sh*b.cross(E + U.cross(B))
+
+        # Extract coefficients manually
+        Je = J.dot(N.i)
+        Jn = J.dot(N.j)
+        Ju = J.dot(N.k)
+
+        Je_grouped = collect(expand(Je), [Ue, Un, Uu])
+        Jn_grouped = collect(expand(Jn), [Ue, Un, Uu])
+        Ju_grouped = collect(expand(Ju), [Ue, Un, Uu])
+        
+        -----------------------------
+
+        Args:
+            dat (instance of data class): on the grid that u is to be computed on
+            conv (instance of the convection class): containg the lompe fit, and function to evaluate E-field
+            sim (instance of the simulation class): Containin the GEMINI data and grid
+            jperp (2D array): Shape (N,3), containing the e, n, u components of the modelled 
+                jperp current density
+
+        Returns:
+            instance of data class: now containging ue, un, uu
+        """          
+        N = dat.lat.size
+        br, btheta, bphi = self.make_b_unitvectors(dat.Bu,-dat.Bn, dat.Be)     
+        be = bphi.copy()
+        bn = -btheta.copy()
+        bu = br.copy()
+        
+        jperpe = jperp[0,:]
+        jperpn = jperp[1,:]
+        jperpu = jperp[2,:]
+        # jperpe = dat.jperpe
+        # jperpn = dat.jperpn
+        # jperpu = dat.jperpu
+        
+        E = conv.get_E_from_lmodel(sim, dat)
+        Ee = E[0,:]
+        En = E[1,:]
+        Eu = E[2,:]
+        # Ee = dat.Ee
+        # En = dat.En
+        # Eu = dat.Eu
+        
+        ue = np.zeros(N)
+        un = np.zeros(N)
+        uu = np.zeros(N)
+           
+        for n in range(N):
+            # Get Jperp values on grid
+            de = jperpe[n] - Ee[n]*dat.sp[n] + En[n]*bu[n]*dat.sh[n] - Eu[n]*bn[n]*dat.sh[n]
+            dn = jperpn[n] - En[n]*dat.sp[n] - Ee[n]*bu[n]*dat.sh[n] + Eu[n]*be[n]*dat.sh[n]
+            du = jperpu[n] - Eu[n]*dat.sp[n] - En[n]*be[n]*dat.sh[n] + Ee[n]*bn[n]*dat.sh[n]
+            d = np.hstack((de,dn,du))
+            
+            # Coefs for Ue, Un, Uu for jperpe
+            cee = dat.Bn[n]*bn[n]*dat.sh[n] + dat.Bu[n]*bu[n]*dat.sh[n]
+            cen = -dat.Be[n]*bn[n]*dat.sh[n] + dat.Bu[n]*dat.sp[n]
+            ceu = -dat.Be[n]*bu[n]*dat.sh[n] - dat.Bn[n]*dat.sp[n]
+            ce = np.hstack((cee, cen, ceu))
+            
+            # Coefs for Ue, Un, Uu for jperpn
+            cne = -dat.Bn[n]*be[n]*dat.sh[n] - dat.Bu[n]*dat.sp[n]
+            cnn = dat.Be[n]*be[n]*dat.sh[n] + dat.Bu[n]*bu[n]*dat.sh[n]
+            cnu = dat.Be[n]*dat.sp[n] - dat.Bn[n]*bu[n]*dat.sh[n]
+            cn = np.hstack((cne, cnn, cnu))
+            
+            # Coefs for Ue, Un, Uu for jperpu
+            cue = dat.Bn[n]*dat.sp[n] - dat.Bu[n]*be[n]*dat.sh[n]
+            cun = -dat.Be[n]*dat.sp[n] - dat.Bu[n]*bn[n]*dat.sh[n]
+            cuu = dat.Be[n]*be[n]*dat.sh[n] + dat.Bn[n]*bn[n]*dat.sh[n]
+            cu = np.hstack((cue, cun, cuu))
+
+            G = np.vstack((ce,cn,cu))
+            u = np.linalg.pinv(G).dot(d)
+            ue[n] = u[0]
+            un[n] = u[1]
+            uu[n] = u[2]
+        dat.ue = ue
+        dat.un = un
+        dat.uu = uu
+        
+        return dat          

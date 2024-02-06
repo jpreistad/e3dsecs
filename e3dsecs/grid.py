@@ -6,7 +6,8 @@ import great_circle_calculator.great_circle_calculator as gcc
 
 class grid:
 
-    def __init__(self, simulation, alts=None, extend=5, dlat=0.3, dlon=0, resolution_factor=0.45) -> None:
+    def __init__(self, simulation, alts=None, extend=5, dlat=0.3, dlon=0,
+                 crop_factor=0.2, resolution_factor=0.45) -> None:
         """Make grid class to contain the analysis grid used in all steps of volumetric 
         reconstruction E3DSECS
 
@@ -23,6 +24,8 @@ class grid:
             resolution_factor (float, optional): How much to reduce the spatial resolution 
                 compared to GEMINI. 0.5 will double the spacing of grid cells. 
                 Defaults to 0.45.
+            crop_factor (float): How much to reduce the CS grid compared to GEMINI grid.
+                Default is 0.2
         """        
         
         self.RE = simulation.RE
@@ -39,7 +42,7 @@ class grid:
         
         # Horizontal CS grid
         grid, grid_l = self.make_csgrid(simulation.xg, maph=simulation.maph, 
-                                            h0=alts_grid[0], crop_factor=0.2, 
+                                            h0=alts_grid[0], crop_factor=crop_factor, 
                                             resolution_factor=0.45, extend=extend, 
                                             dlat = 0.2)
         #Grid dimensions

@@ -738,17 +738,17 @@ def scatterplot_reconstruction(grid, alts_grid, dat, lon, lat, alt, full_j, jpar
     m_theta = np.arcsin(np.sqrt((RE+alts_grid[0])/(RE+alt))*np.sin(mtheta_)) #sjekk - ok!
     m_mlon = mlon_
     if dipolekw:
-        ax.scatter(1e6*j_gm_enu[:,2],1e6*full_j[0:N], s=1, label='$\mathbf{j}_r$', color='C0')
+        ax.scatter(1e6*j_gm_enu[:,2],1e6*full_j[0:N], s=1, label='$j_r$', color='C0')
         inside = grid.ingrid(np.degrees(m_mlon), 90-np.degrees(m_theta), ext_factor=-2)
-        ax.scatter(-1e6*j_gm_enu[:,1],1e6*full_j[N:2*N], s=1, label='$\mathbf{j}_\\theta$', color='C1')
-        ax.scatter(1e6*j_gm_enu[:,0],1e6*full_j[2*N:3*N], s=1, label='$\mathbf{j}_\phi$', color='C2')
+        ax.scatter(-1e6*j_gm_enu[:,1],1e6*full_j[N:2*N], s=1, label='$j_\\theta$', color='C1')
+        ax.scatter(1e6*j_gm_enu[:,0],1e6*full_j[2*N:3*N], s=1, label='$j_\phi$', color='C2')
     else:    
         m_glon, m_glat = convert.geomag2geog(m_mlon, m_theta)
         inside = grid.ingrid(m_glon, m_glat, ext_factor=-2)
         print(type(dat))
-        ax.scatter(1e6*dat.ju,1e6*full_j[0:N], s=1, label='$\mathbf{j}_r$', color='C0')
-        ax.scatter(-1e6*dat.jn,1e6*full_j[N:2*N], s=1, label='$\mathbf{j}_\\theta$', color='C1')
-        ax.scatter(1e6*dat.je,1e6*full_j[2*N:3*N], s=1, label='$\mathbf{j}_\phi$', color='C2')
+        ax.scatter(1e6*dat.ju,1e6*full_j[0:N], s=1, label='$j_r$', color='C0')
+        ax.scatter(-1e6*dat.jn,1e6*full_j[N:2*N], s=1, label='$j_\\theta$', color='C1')
+        ax.scatter(1e6*dat.je,1e6*full_j[2*N:3*N], s=1, label='$j_\phi$', color='C2')
         
     highalt = alt > 200
     ax.scatter(1e6*dat.fac[highalt],1e6*jpar[highalt], s=1, label='FAC>200km', color='C3')
@@ -932,9 +932,9 @@ def snr_output_plot(covar_j, meshgrid, dat, grid, alts_grid, clim=2e-5,
     ax4 = plt.subplot2grid((20, 32), (10, 20), rowspan = 10, colspan = 10, projection='3d')
     axs2 = [ax4,ax5,ax6] 
     plotparams = ['je', 'jn','ju']
-    plot_titles = ['$\\sigma_{\\mathbf{j}_{\phi}}$', '$\\sigma_{\\mathbf{j}_{\\theta}}$', '$\\sigma_{\\mathbf{j}_{r}}$']
+    plot_titles = ['$\\sigma_{j_{\phi}}$', '$\\sigma_{j_{\\theta}}$', '$\\sigma_{j_{r}}$']
     kwargs={'linewidth':1}
-    plot_titles2 = ['$|\mathbf{j}_{\phi, GEMINI}| / \\sigma_{\\mathbf{j}_{\phi}}$', '$|\mathbf{j}_{\\theta, GEMINI}| / \\sigma_{\\mathbf{j}_{\\theta}}$', '$|\mathbf{j}_{r, GEMINI}| / \\sigma_{\\mathbf{j}_{r}}$']
+    plot_titles2 = ['$|j_{\phi, GEMINI}| / \\sigma_{j_{\phi}}$', '$|j_{\\theta, GEMINI}| / \\sigma_{j_{\\theta}}$', '$|j_{r, GEMINI}| / \\sigma_{j_{r}}$']
     
     for pp, ax in enumerate(axs):
         if pp == 0:
@@ -1060,9 +1060,9 @@ def performance_plot(reconstructed_j, meshgrid, dat, grid, alts_grid, clim=2e-5,
     ax4 = plt.subplot2grid((20, 32), (10, 20), rowspan = 10, colspan = 10, projection='3d')
     axs2 = [ax4,ax5,ax6] 
     plotparams = ['je', 'jn','ju']
-    plot_titles2 = ['$\\mathbf{j}_{\phi}$', '$\\mathbf{j}_{\\theta}$', '$\\mathbf{j}_{r}$']
+    plot_titles2 = ['$j_{\phi}$', '$j_{\\theta}$', '$j_{r}$']
     kwargs={'linewidth':1}
-    plot_titles = ['$\mathbf{j}_{\phi}$', '$\mathbf{j}_{\\theta}$', '$\mathbf{j}_{r}$']
+    plot_titles = ['$j_{\phi}$', '$j_{\\theta}$', '$j_{r}$']
     
     for pp, ax in enumerate(axs):
         if pp == 0:
@@ -1118,6 +1118,105 @@ def performance_plot(reconstructed_j, meshgrid, dat, grid, alts_grid, clim=2e-5,
                                 norm=norm,
                                 orientation='vertical')
     cb1.set_label('[A/m$^2$]', fontsize=16)
+    cb1.ax.yaxis.set_label_coords(-1.3, 0.5)            
+    
+    return fig
+
+
+def output_plot(reconstructed_p, meshgrid, dat, grid, alts_grid, clim=2e-5, 
+                    cut='j', ind=5, transmitter=('ski_mod', 67.5, 23.7), 
+                    receivers=[('ski_mod', 67.5, 23.7),
+                     ('krs_mod', 66.55, 25.92), ('kai_mod', 66.48, 22.54)],
+                    plot_titles = ['$j_{\phi}$', '$j_{\\theta}$', '$j_{r}$'],
+                    unit='[m/s]'):
+
+    # Function that make a plot of reconstructed j and compare with ground truth
+    # from GEMINI. This function is on the same form as the SNR plot function above
+
+
+    datadict = dat.__dict__
+
+    # ind = 5 # slice index to show
+    # cut = 'k' # slice dimension
+
+    alt_ev = meshgrid[0]
+    lat_ev = meshgrid[1]
+    lon_ev = meshgrid[2]
+    
+    # Native 3D SECS grid
+    alt_ev_, eta_ev_, xi_ev_ = np.meshgrid(alts_grid, grid.eta[:,0], grid.xi[0,:], indexing='ij')    
+    lon_ev_, lat_ev_ = grid.projection.cube2geo(xi_ev_, eta_ev_)
+    lon_ev_, lat_ev_ = geomag2geog(np.radians(lon_ev_), np.radians(90-lat_ev_))
+
+
+    N = reconstructed_p.shape[0] // 3
+    K = alts_grid.size
+    I = grid.shape[0]
+    J = grid.shape[1]
+    KIJ = K*I*J
+
+    # Convert current densiry to dipole components: Not needed anymore since we now 
+    # do evertyhing in geographic components/coordinates
+    # jgg_enu = np.vstack((datadict['je'],datadict['jn'], datadict['ju'])).T
+    # jgm_enu = secs3d.gemini_tools.enugg2enugm(jgg_enu, datadict['mappedglon'], \
+    #         datadict['mappedglat']) # Convert ion perp velocity (local ENU) from geographic to geomag components    
+    # datadict['je_gm'] = jgm_enu[:,0]
+    # datadict['jn_gm'] = jgm_enu[:,1]
+    # datadict['ju_gm'] = jgm_enu[:,2]
+    fig = plt.figure(figsize=(15,6))
+    
+    # Top row showing 3D reconstruction uncertainties. Bottom row show SNR
+    ax3 = plt.subplot2grid((10, 32), (0, 0), rowspan = 10, colspan = 10, projection='3d')
+    ax2 = plt.subplot2grid((10, 32), (0, 10), rowspan = 10, colspan = 10, projection='3d')
+    ax1 = plt.subplot2grid((10, 32), (0, 20), rowspan = 10, colspan = 10, projection='3d')
+    axs = [ax1,ax2,ax3]
+    kwargs={'linewidth':1}
+    
+    for pp, ax in enumerate(axs):
+        if pp == 0:
+            pp2 = 2
+        elif pp == 1:
+            pp2 = 1
+        elif pp ==2:
+            pp2 = 0
+        _j = reconstructed_p[pp2*N:(pp2+1)*N].reshape(alt_ev.shape)
+
+
+        # noise_cf = np.sqrt(np.diag(Cmpost[0:KIJ,:KIJ]).reshape((K,I,J)))
+        # noise_df = np.sqrt(np.diag(Cmpost[1*KIJ:2*KIJ,1*KIJ:2*KIJ]).reshape((K,I,J)))
+        ax = visualization.field_aligned_grid(ax, grid, alts_grid, color='green', dipoleB=False, **kwargs, coastlines=False)
+        ax.set_title(plot_titles[pp], fontsize=16)
+        if pp==2:
+            x_, y_, z_ = coordinates.sph_to_car((RE+0, 90-74, 37), deg=True)
+            ax.text(x_[0], y_[0], z_[0], '3D reconstruction', fontsize=16, zorder=10)
+        if type(cut) == str:
+            ax = visualization.plotslice(ax,(alt_ev,lat_ev,lon_ev), _j, cut=cut, clim=clim) 
+        else:
+            for ii, c in enumerate(cut):
+                ax = visualization.plotslice(ax,(alt_ev,lat_ev,lon_ev), _j, cut=c, ind=ind[ii], clim=clim)
+                # Plot the radar site locations
+                alts = np.ones(3)*0.01
+                glats = np.array([receivers[0][1], receivers[1][1], receivers[2][1]])
+                glons = np.array([receivers[0][2], receivers[1][2], receivers[2][2]])
+                x_, y_, z_ = coordinates.sph_to_car((RE+alts, 90-glats, glons), deg=True)
+                ax.scatter(x_, y_, z_, marker='*', c=['C0', 'C2', 'C1'])
+                # Print alatitude of hor cuts
+                # if (c=='k') & (pp==2):
+                #     alt = int(alt_ev[ind[ii],0,0])
+                #     # glon, glat = geomag2geog(np.radians(grid.lon[-1,0]), np.radians(90-grid.lat[-1,0]))
+                #     x_, y_, z_ = coordinates.sph_to_car((RE+alt, 90-grid.lat[-1,0]-0.4, grid.lon[-1,0]), deg=True)
+                #     ax.text(x_[0], y_[0], z_[0], str(alt)+' km', fontsize=10)
+                #     ax2.text(x_[0], y_[0], z_[0], str(alt)+' km', fontsize=10)
+                
+    # Colorbar
+    cbarax = plt.subplot2grid((10,32), (1, 31), rowspan = 7, colspan = 1)
+    cmap = plt.cm.bwr
+    import matplotlib as mpl
+    norm = mpl.colors.Normalize(vmin=-clim, vmax=clim)
+    cb1 = mpl.colorbar.ColorbarBase(cbarax, cmap=cmap,
+                                norm=norm,
+                                orientation='vertical')
+    cb1.set_label(unit, fontsize=16)
     cb1.ax.yaxis.set_label_coords(-1.3, 0.5)            
     
     return fig    
