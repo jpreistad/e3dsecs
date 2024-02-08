@@ -77,8 +77,10 @@ class data:
 
         if (az is None ) | (el is None):
             # Make a lot of beams
-            Nrings = 5#18
-            __el = np.linspace(35,80,Nrings)
+            # Nrings = 5#18
+            # __el = np.linspace(50,80,Nrings)
+            __el = np.array([45,50,60,70,80])
+            Nrings = __el.size
             Naz = 10
             __az = np.arange(0,360,360/Naz)
             el = np.tile(__el,Naz)

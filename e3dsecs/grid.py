@@ -7,7 +7,8 @@ import great_circle_calculator.great_circle_calculator as gcc
 class grid:
 
     def __init__(self, simulation, alts=None, extend=5, dlat=0.3, dlon=0,
-                 crop_factor=0.2, resolution_factor=0.45) -> None:
+                 crop_factor=0.2, resolution_factor=0.45, sitelat=None, sitephi=None, 
+                 orientation=None) -> None:
         """Make grid class to contain the analysis grid used in all steps of volumetric 
         reconstruction E3DSECS
 
@@ -43,8 +44,9 @@ class grid:
         # Horizontal CS grid
         grid, grid_l = self.make_csgrid(simulation.xg, maph=simulation.maph, 
                                             h0=alts_grid[0], crop_factor=crop_factor, 
-                                            resolution_factor=0.45, extend=extend, 
-                                            dlat = 0.2)
+                                            resolution_factor=resolution_factor, extend=extend, 
+                                            dlat = dlat, dlon=dlon, sitelat=sitelat,
+                                            sitephi=sitephi, orientation=orientation)
         #Grid dimensions
         K = alts_grid.shape[0] #Number of vertival layers
         I = grid.shape[0] #Number of cells in eta direction, north-south, W dimension
@@ -67,7 +69,7 @@ class grid:
         
     def make_csgrid(self, xg, maph = 200, h0 = 90, crop_factor = 0.6, resolution_factor = 0.5, 
                     extend = 1, dlon = 0., dlat = 0., asymres=1,
-                    extend_ew=1):
+                    extend_ew=1, sitelat=None, sitephi=None, orientation=None):
         '''
         Put a CubedSphere grid inside GEMINI model domain at specified height. The 
         CS grid is made in geographic coordinates, like everything else in this library.
@@ -133,13 +135,20 @@ class grid:
             xg['glon'][ii,dims[1]//2,dims[2]//2])
         x1 = (xg['glat'][ii,1+dims[1]//2,dims[2]//2], 
             xg['glon'][ii,1+dims[1]//2,dims[2]//2])
-        orientation = np.degrees(getbearing(np.array([x0[0]]), np.array([x0[1]]), 
-                                            np.array([x1[0]]), np.array([x1[1]])))
         
+        if orientation is None:
+            orientation = np.degrees(getbearing(np.array([x0[0]]), np.array([x0[1]]), 
+                                                np.array([x1[0]]), np.array([x1[1]])))
+        else:
+            orientation = np.array([orientation])
+            
         #Centre location of CS grid
-        position = (xg['glon'][ii,dims[1]//6,dims[2]//2] + dlon, 
-                    xg['glat'][ii,(dims[1]//6),dims[2]//2] + dlat) #Added the //6 hack             
-
+        if sitelat is None:
+            position = (xg['glon'][ii,dims[1]//6,dims[2]//2] + dlon, 
+                        xg['glat'][ii,(dims[1]//6),dims[2]//2] + dlat) #Added the //6 hack             
+        else:
+            position = (sitephi, sitelat)
+            
         #Dimensions of CS grid
         p0 = (xg['glon'][ii,0,dims[2]//2],xg['glat'][ii,0,dims[2]//2])
         p0lon = np.rad2deg(np.arctan2(np.sin(np.deg2rad(p0[0])), np.cos(np.deg2rad(p0[0]))))

@@ -765,8 +765,28 @@ def scatterplot_reconstruction(grid, alts_grid, dat, lon, lat, alt, full_j, jpar
     # lgnd.legendHandles[1]._legmarker.set_markersize(6)
     ax.set_xlabel('GEMINI $[\mu A/m^2]$')
     ax.set_ylabel('3D SECS $[\mu A/m^2]$')
-    ax.set_ylim(-120,120)
-    ax.set_xlim(-120,120)
+    ax.set_ylim(-140,70)
+    ax.set_xlim(-140,70)
+    
+    residuals_e = dat.je*1e6 - 1e6*full_j[2*N:3*N]
+    rmse_cv_e = np.linalg.norm(residuals_e)#/np.mean(np.abs(dat.je*1e6))
+    corr_e = np.corrcoef(dat.je, full_j[2*N:3*N])[0,1]
+    residuals_n = dat.jn*1e6 + 1e6*full_j[1*N:2*N]
+    rmse_cv_n = np.linalg.norm(residuals_n)#/np.mean(np.abs(dat.jn*1e6))
+    corr_n = np.corrcoef(dat.jn, -full_j[1*N:2*N])[0,1]
+    residuals_u = dat.ju*1e6 - 1e6*full_j[0*N:1*N]
+    rmse_cv_u = np.linalg.norm(residuals_u)#/np.mean(np.abs(dat.ju*1e6))
+    corr_u = np.corrcoef(dat.ju, full_j[0*N:1*N])[0,1]
+    residuals_fac = dat.fac[highalt]*1e6 - 1e6*jpar[highalt]
+    rmse_cv_fac = np.linalg.norm(residuals_fac)#/np.mean(np.abs(dat.fac*1e6))
+    corr_fac = np.corrcoef(dat.fac[highalt], jpar[highalt])[0,1]
+
+    ax.text(15, -60, 'RMSE $[\mu A/m^2], r$', color='black', ha='left')   
+    ax.text(50, -75, '%5i,   %4.2f' % (rmse_cv_u, corr_u), color='C0', ha='right')
+    ax.text(50, -90, '%5i,   %4.2f' % (rmse_cv_n, corr_n), color='C1', ha='right')
+    ax.text(50, -105, '%5i,   %4.2f' % (rmse_cv_e, corr_e), color='C2', ha='right')
+    ax.text(50, -120, '%5i,   %4.2f' % (rmse_cv_fac, corr_fac), color='C3', ha='right')
+
     
     return fig
     
@@ -803,7 +823,7 @@ def scatterplot_reconstruction(grid, alts_grid, dat, lon, lat, alt, full_j, jpar
 # plt.hist(np.degrees(np.arccos(vdotb/(bmags*vmappedmag))))
 # plt.hist(np.degrees(np.arccos(vdotb0/(bmags*vmappedmag))))    
 
-def scatterplot_lompe(ax, sim, dat, conv):
+def scatterplot_lompe(ax, sim, dat, conv, gr):
     '''
     Functionto produce plot of how the lompe fit reproduces the F-region ion drift
     velocities perp to B in GEMINI
@@ -821,6 +841,8 @@ def scatterplot_lompe(ax, sim, dat, conv):
         Contain lompe representation. conv.data also contain the instance of the
         data class of the E3D like samples used to make the lompe fit, but also contain
         all samples also below maph.
+    gr : instance of the grid class
+        Contains both lompe and 3D grids
 
 
     Returns
@@ -828,25 +850,26 @@ def scatterplot_lompe(ax, sim, dat, conv):
     axis object
 
     '''
+    
+    use = gr.grid.ingrid(lon=dat.mappedglon, lat=dat.mappedglat)
 
     enugg_vec = conv.get_E_from_lmodel(sim, dat, returnvperp=True).T
     
-    residuals_e = np.linalg.norm(dat.vperpmappede - enugg_vec[:,0])
-    residuals_n = np.linalg.norm(dat.vperpmappedn - enugg_vec[:,1])
-    residuals_u = np.linalg.norm(dat.vperpmappedu - enugg_vec[:,2])
+    residuals_e = np.linalg.norm(dat.vperpmappede[use] - enugg_vec[use,0])
+    residuals_n = np.linalg.norm(dat.vperpmappedn[use] - enugg_vec[use,1])
+    residuals_u = np.linalg.norm(dat.vperpmappedu[use] - enugg_vec[use,2])
     resmag = np.sqrt(residuals_e**2+residuals_n**2+residuals_u**2)
 
-           
-    ax.scatter(dat.vperpmappede, enugg_vec[:,0], label='$v_\perp$ east', alpha=0.1)
-    ax.scatter(dat.vperpmappedn, enugg_vec[:,1], label='$v_\perp$ north', alpha=0.1)
-    ax.scatter(dat.vperpmappedu, enugg_vec[:,2], label='$v_\perp$ up', alpha=0.1)
+    ax.scatter(dat.vperpmappede[use], enugg_vec[use,0], label='$v_\perp$ east', alpha=0.1)
+    ax.scatter(dat.vperpmappedn[use], enugg_vec[use,1], label='$v_\perp$ north', alpha=0.1)
+    ax.scatter(dat.vperpmappedu[use], enugg_vec[use,2], label='$v_\perp$ up', alpha=0.1)
     ax.legend(frameon=False)
     # ax.set_xlabel('True value, no noise [m/s]')
     # ax.set_ylabel('Estimate from noisy data [m/s]')
-    minx = np.min(np.hstack((dat.vperpe,dat.vperpn)))
-    maxx = np.max(np.hstack((dat.vperpe,dat.vperpn)))
-    miny = np.min(np.hstack((enugg_vec[:,0],enugg_vec[:,1])))
-    maxy = np.max(np.hstack((enugg_vec[:,0],enugg_vec[:,1])))
+    minx = np.min(np.hstack((dat.vperpe[use],dat.vperpn[use])))
+    maxx = np.max(np.hstack((dat.vperpe[use],dat.vperpn[use])))
+    miny = np.min(np.hstack((enugg_vec[use,0],enugg_vec[use,1])))
+    maxy = np.max(np.hstack((enugg_vec[use,0],enugg_vec[use,1])))
     # minx = -1900
     # maxx = 550
     # miny = -1900

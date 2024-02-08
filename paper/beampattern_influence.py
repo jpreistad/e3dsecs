@@ -47,31 +47,54 @@ l1              = 10**(-2.3) # Regularization parameter for 3D reconstruction in
 diagnostic      = False# Wheter to make diagnostic plots
 overwrite       = False# Overwrites exisring 3D model coefficient file
 crossval        = False# Determine 3D model reg. parameter using cross-validation
-beamfile        = 'datadict_31beams.npy' # Specifies which beam sampling file to use
+beamfile        = 'datadict_spencer_beams.npy' # Specifies which beam sampling file to use
 
 
 # Make custom beam pattern
-Nrings = 3#18
-__el = np.linspace(57.5,80,Nrings)
-Naz = 10
-__az = np.arange(0,360,360/Naz)
-el = np.tile(__el,Naz)
-_az = []
-_daz = 360/Naz/2
-daz = np.array([0,_daz,0]) # alter the az value every other ring
-# daz = np.array([i*360/Naz/Nrings for i in np.arange(5)])
-for a in __az:
-    _az.append(daz+a)
-az = np.array(_az).flatten()        
-el = np.hstack((el,90)) # add a vertical beam
-az = np.hstack((az,0)) # add a vertical beam
+# Nrings = 3#18
+# __el = np.linspace(57.5,80,Nrings)
+# Naz = 10
+# __az = np.arange(0,360,360/Naz)
+# el = np.tile(__el,Naz)
+# _az = []
+# _daz = 360/Naz/2
+# daz = np.array([0,_daz,0]) # alter the az value every other ring
+# # daz = np.array([i*360/Naz/Nrings for i in np.arange(5)])
+# for a in __az:
+#     _az.append(daz+a)
+# az = np.array(_az).flatten()        
+# el = np.hstack((el,90)) # add a vertical beam
+# az = np.hstack((az,0)) # add a vertical beam
+az = np.array([-1.34999651e+02, -1.46310647e+02, -1.61567265e+02,  1.79996264e+02,
+        1.61560540e+02,  1.46305474e+02,  1.34995915e+02, -1.23688759e+02,
+       -1.34999745e+02, -1.53437096e+02,  1.79994396e+02,  1.53428130e+02,
+        1.34994141e+02,  1.23685310e+02, -1.08432278e+02, -1.16562514e+02,
+       -1.34999838e+02,  1.79988791e+02,  1.34988631e+02,  1.16558032e+02,
+        1.08430037e+02, -8.99959810e+01, -8.99942067e+01, -8.99886946e+01,
+        4.49946880e+01,  8.99886989e+01,  8.99942077e+01,  8.99959815e+01,
+       -7.15604316e+01, -6.34281417e+01, -4.49887643e+01,  1.12048524e-02,
+        4.49999713e+01,  6.34326251e+01,  7.15626734e+01, -5.63055030e+01,
+       -4.49942742e+01, -2.65582326e+01,  5.60295200e-03,  2.65671977e+01,
+        4.49998777e+01,  5.63089514e+01, -4.49960481e+01, -3.36855276e+01,
+       -1.84303052e+01,  3.73540252e-03,  1.84370291e+01,  3.36906999e+01,
+        4.49997838e+01])
+el = np.array([78.01252633, 79.77334637, 81.00970123, 81.46427611, 81.00935497,
+       79.77274322, 78.01176626, 79.77440053, 81.94726543, 83.61886038,
+       84.287919  , 83.61836496, 81.94648762, 79.77349589, 81.01156262,
+       83.6195233 , 85.95537653, 87.13775169, 85.95458768, 83.61853259,
+       81.01052408, 81.46693485, 84.28911023, 87.1380482 , 89.99920747,
+       87.13693016, 84.28800012, 81.4658377 , 81.01309353, 83.62037109,
+       85.95544326, 87.13724   , 85.95465473, 83.61938066, 81.01205524,
+       79.77804781, 81.94986154, 83.62055609, 84.28921743, 83.62006095,
+       81.94908413, 79.77714359, 78.01918137, 79.7788174 , 81.01429419,
+       81.46853414, 81.01394819, 79.77821467, 78.0184218 ])
 
 
 # Make objects containing simulation data (sim), grid (gr), sampled data(dat), 
 # fitted convection (conv), and the 3d model (mod)
 
 sim = simulation.simulation(path, maph=maph)
-gr = grid.grid(sim, alts=alt_layers, extend=extend, dlat=0.3, dlon=0, resolution_factor=0.45)
+gr = grid.grid(sim, alts=alt_layers, extend=extend, dlat=0.3, dlon=0, crop_factor=0.1, resolution_factor=0.75)
 dat = data.data(gr, sim, beams=True, sitelat=sitelat, sitephi=sitephi,
                  az=az, el=el, uniformmesh=False, lat_ev=None, lon_ev=None, 
                  alt_ev=None, e3doubt_=e3doubt_, intsec = intsec, min_alt=min_alt, 

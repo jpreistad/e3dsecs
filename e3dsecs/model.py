@@ -350,7 +350,8 @@ class model:
         # Save result of inversion
         grid_tuple = (grid.grid.projection.position, grid.grid.projection.orientation, grid.grid.L, 
                     grid.grid.W, grid.grid.Lres, grid.grid.Wres, grid.grid.R)
-        keep = {'alts_grid':grid.alts_grid, 'grid':grid_tuple, 'm':m, 'Cmpost':Cmpost}    
+        keep = {'alts_grid':grid.alts_grid, 'grid':grid_tuple, 'm':m, 'Cmpost':Cmpost, 
+                'Gshape':Gcopy.shape}    
         if diagnostic:
             Rmatrix = Cmpost.dot(GTG)
             keep['Rmatrix'] = Rmatrix
