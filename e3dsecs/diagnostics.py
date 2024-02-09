@@ -336,7 +336,7 @@ def plot_analysis_grid(datadict, grid, alts_grid, lat_ev, lon_ev, alt_ev, dipole
     L = grid.L*1e-3
     Lres = grid.Lres*1e-3
     x_, y_, z_ = coordinates.sph_to_car((RE, 90-lat_, lon_), deg=True)
-    xlim = (x_[0]-L+5*Lres, x_[0]+L-3*Lres) 
+    xlim = (x_[0]-L+4*Lres, x_[0]+L-3*Lres) 
     ylim = (y_[0]-L+6*Lres, y_[0]+L-3*Lres) 
     zlim = (z_[0]+ 0.15*alts_grid[-1], z_[0]+ 0.75*alts_grid[-1])
     ax.set_xlim(xlim)
@@ -879,7 +879,7 @@ def scatterplot_lompe(ax, sim, dat, conv, gr):
     ax.plot(xx,xx, color='black')
     
     # Residuals:
-    ax.text(-1800,-150, 'Residual norm: %i' % resmag)
+    ax.text(-1800,-150, 'RMSE: %i m/s' % resmag)
 
     
     # extent = np.max(np.abs(np.hstack((ax.get_xlim(), ax.get_ylim()))))

@@ -2069,10 +2069,10 @@ class model:
         # En = dat.En
         # Eu = dat.Eu
         
-        ue = np.zeros(N)
-        un = np.zeros(N)
-        uu = np.zeros(N)
-           
+        uperpe = np.zeros(N)
+        uperpn = np.zeros(N)
+        uperpu = np.zeros(N)
+        
         for n in range(N):
             # Get Jperp values on grid
             de = jperpe[n] - Ee[n]*dat.sp[n] + En[n]*bu[n]*dat.sh[n] - Eu[n]*bn[n]*dat.sh[n]
@@ -2098,13 +2098,80 @@ class model:
             cuu = dat.Be[n]*be[n]*dat.sh[n] + dat.Bn[n]*bn[n]*dat.sh[n]
             cu = np.hstack((cue, cun, cuu))
 
-            G = np.vstack((ce,cn,cu))
-            u = np.linalg.pinv(G).dot(d)
-            ue[n] = u[0]
-            un[n] = u[1]
-            uu[n] = u[2]
-        dat.ue = ue
-        dat.un = un
-        dat.uu = uu
-        
+            G = np.vstack((ce,cn,cu)) #is singular since rank=2. My guess is that this has to do with Ohms law expressing j_perp. Also E does not have much variation along B.
+            Ginv = np.linalg.pinv(G)
+            uperp = Ginv.dot(d)
+            # B = np.array([be[n], bn[n], bu[n]])
+            # print(u.dot(B)) # Apparently, we only have the perp component of u
+            # res = d - G.dot(u) # found to be very small compared to d. But is the solution unique?
+            
+           
+            uperpe[n] = uperp[0]
+            uperpn[n] = uperp[1]
+            uperpu[n] = uperp[2]
+        dat.uperpe = uperpe
+        dat.uperpn = uperpn
+        dat.uperpu = uperpu
+                
         return dat          
+
+    def calc_u_direct(self, dat, conv, sim, jperp):
+        """
+        This function is written by SMH. who derived the explicit expression for uperp from 
+        Ohms law.
+        
+        Function that calculates the neutral wind at each grid point based on the modelled jperp.
+        Using Ohms law, and the E-field provided by the Lompe fit, mapped to each location in dat.
+        
+        The analytical solution of Ohms law for u as a function of Eperp, jperp, sigmap, and sigmah is used here.
+        
+        -----------------------------
+
+        Args:
+            dat (instance of data class): on the grid that u is to be computed on
+            conv (instance of the convection class): contains the lompe fit, and function to evaluate E-field
+            sim (instance of the simulation class): contains GEMINI data and grid
+            jperp (2D array): Shape (N,3), contains the e, n, u components of the modelled 
+                jperp current density
+
+        Returns:
+            instance of data class: now containing ue, un, uu
+        """          
+
+        def crosser(pe, pn, pu, qe, qn, qu):
+            se = pn * qu - pu * qn
+            sn = pu * qe - pe * qu
+            su = pe * qn - pn * qe
+
+            return se, sn, su
+
+
+        N = dat.lat.size
+        br, btheta, bphi = self.make_b_unitvectors(dat.Bu,-dat.Bn, dat.Be)     
+        be = bphi.copy()
+        bn = -btheta.copy()
+        bu = br.copy()
+        
+        B = np.sqrt(dat.Be**2 + dat.Bn**2 + dat.Bu**2)
+
+        jperpe = jperp[0,:]
+        jperpn = jperp[1,:]
+        jperpu = jperp[2,:]
+        
+        E = conv.get_E_from_lmodel(sim, dat)
+        Ee = E[0,:]
+        En = E[1,:]
+        Eu = E[2,:]
+        
+        Exbe, Exbn, Exbu = crosser(Ee, En, Eu, be, bn, bu)
+        jxbe, jxbn, jxbu = crosser(jperpe, jperpn, jperpu, be, bn, bu)
+        
+        sigmap = dat.sp
+        sigmah = dat.sh
+        sigmasq = sigmap**2 + sigmah**2
+
+        dat.uperpe = 1/B * ( Exbe + (sigmah * jperpe - sigmap * jxbe ) / sigmasq )
+        dat.uperpn = 1/B * ( Exbn + (sigmah * jperpn - sigmap * jxbn ) / sigmasq )
+        dat.uperpu = 1/B * ( Exbu + (sigmah * jperpu - sigmap * jxbu ) / sigmasq )
+
+        return dat  

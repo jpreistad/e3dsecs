@@ -22,9 +22,9 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="0.68791902"
-     inkscape:cx="227.49771"
-     inkscape:cy="380.85878"
+     inkscape:zoom="0.80292673"
+     inkscape:cx="528.69083"
+     inkscape:cy="450.8506"
      inkscape:document-units="mm"
      inkscape:current-layer="layer1"
      inkscape:document-rotation="0"
@@ -2256,5 +2256,30 @@
          style="stroke-width:0.216721"
          x="93.184952"
          y="177.41695">or</tspan></text>
+    <rect
+       style="fill:#1f80eb;fill-opacity:0.203922;stroke:#000000;stroke-width:1;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="rect833-4-5"
+       width="51.085239"
+       height="13.781382"
+       x="6.7667179"
+       y="191.94583"
+       ry="2.018223"
+       rx="2.4181435" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:6.35px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="9.2791948"
+       y="200.53664"
+       id="text898-8"><tspan
+         sodipodi:role="line"
+         id="tspan896-4"
+         x="9.2791948"
+         y="200.53664"
+         style="font-weight:normal;font-size:6.35px;stroke-width:0.264583">Regularization</tspan></text>
+    <path
+       style="fill:none;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#marker3511)"
+       d="m 40.476555,205.64454 25.882975,4.76783"
+       id="path10"
+       sodipodi:nodetypes="cc" />
   </g>
 </svg>
