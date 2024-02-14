@@ -9,7 +9,7 @@ import dipole
 class data:
 
     def __init__(self, grid, simulation, beams=True, sitelat=67.36, sitephi=23.,
-                 az=None, el=None, uniformmesh=False, lat_ev=None, lon_ev=None, 
+                 az=None, el=None, points=False, lat_ev=None, lon_ev=None, 
                  alt_ev=None, e3doubt_=True, intsec = 5*60, min_alt=90, 
                  max_alt=500, dr=4, tempfile='datadict_temp.npy') -> None:
         """_summary_
@@ -18,6 +18,8 @@ class data:
             grid (grid object): The grid object
             simulation (silmulation object): The simulation object
             beams (bool, optional): Whether to sample along beams. Defaults to True.
+            points (bool, optional): Whether to rather sample at spevific points, provided
+                in lat_ev, lon_ev, alt_ev
         """ 
         
         self.RE = grid.RE
@@ -29,8 +31,8 @@ class data:
         if beams:
             self.sample_eiscat(simulation, sitelat=sitelat, sitephi=sitephi, az=az, el=el,
                                min_alt=min_alt, max_alt=max_alt, dr=dr)
-        elif uniformmesh == True:
-            self.sample_mesh(grid, simulation, lat_ev=lat_ev, lon_ev=lon_ev, alt_ev=alt_ev)
+        elif points == True:
+            self.sample_points(grid, simulation, lat_ev=lat_ev, lon_ev=lon_ev, alt_ev=alt_ev)
             
         if e3doubt_:
             try: #Try to use an existing file, since the e3doubt calculations take a while
@@ -166,7 +168,7 @@ class data:
         self.sample_gemini(simulation, poss)
         
         
-    def sample_mesh(self, grid, simulation, lat_ev=None, lon_ev=None, alt_ev=None):
+    def sample_points(self, grid, simulation, lat_ev=None, lon_ev=None, alt_ev=None):
         '''
         Sample GEMINI at input locations. Input must be geographic locations.
 
@@ -542,3 +544,26 @@ class data:
         Gs = np.swapaxes(np.swapaxes(np.array(Gs),1,0),2,1)    
 
         return Gs
+    
+    
+    def make_b_unitvectors(self):
+        """
+        Function to compute r,theta,phi components of unit vector along B.
+        
+        Returns
+        -------
+        tuple containing the following:
+        
+        br : array-like
+            Radial component of unit vector of magnetic field.
+        btheta : array-like
+            Theta component of unit vector of magnetic field.
+        bphi : array-like
+            Phi component of unit vector of magnetic field.
+
+        """
+        Bmag = np.sqrt(self.Bu**2 + self.Bn**2 + self.Be**2)
+        br = self.Bu/Bmag
+        btheta = -self.Bn/Bmag
+        bphi = self.Be/Bmag
+        return (br, btheta, bphi) 

@@ -8,7 +8,7 @@ class grid:
 
     def __init__(self, simulation, alts=None, extend=5, dlat=0.3, dlon=0,
                  crop_factor=0.2, resolution_factor=0.45, sitelat=None, sitephi=None, 
-                 orientation=None) -> None:
+                 orientation=None, extend_ew=1, asymres=1) -> None:
         """Make grid class to contain the analysis grid used in all steps of volumetric 
         reconstruction E3DSECS
 
@@ -46,7 +46,8 @@ class grid:
                                             h0=alts_grid[0], crop_factor=crop_factor, 
                                             resolution_factor=resolution_factor, extend=extend, 
                                             dlat = dlat, dlon=dlon, sitelat=sitelat,
-                                            sitephi=sitephi, orientation=orientation)
+                                            sitephi=sitephi, orientation=orientation, 
+                                            extend_ew=extend_ew, asymres=asymres)
         #Grid dimensions
         K = alts_grid.shape[0] #Number of vertival layers
         I = grid.shape[0] #Number of cells in eta direction, north-south, W dimension
@@ -110,6 +111,11 @@ class grid:
         extend_ew : int or float
             Factor that grid.L is multiplied with. Will extend magnetic east-west extent
             relative to north-south extent of the grid.
+        sitelat : float, optional
+            If specified, this geographic latitude [degrees] is used as the centre position of the grid
+        sitephi : float, optional
+            If specified, this geographic longitude [degrees] is used as the centre position of the grid            
+
         
         Returns
         -------

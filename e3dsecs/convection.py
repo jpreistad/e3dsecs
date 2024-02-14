@@ -674,7 +674,7 @@ class convection:
         else:
             E_enu = self.get_E_from_lmodel(simulation, data)
         
-        br, btheta, bphi = self.make_b_unitvectors(data.Bu,-data.Bn,data.Be)
+        br, btheta, bphi = data.make_b_unitvectors()
         bhat_enu = np.vstack((bphi,-btheta,br))
 
         # ENU gg conponnets of Hall and Pedersen current
@@ -685,33 +685,3 @@ class convection:
         jh_mag = np.sqrt(jh[0,:]**2 + jh[1,:]**2 + jh[2,:]**2)
 
         return (jh_mag, jp_mag)
-    
-    
-    def make_b_unitvectors(self, Br, Btheta, Bphi):
-        """
-        Parameters
-        ----------
-        Br : array-like
-            1D array of radial magnetic field strength.
-        Btheta : array-like
-            1D array of magnetic field strength in theta direction (towards south).
-        Bphi : array-like
-            1D array of magnetic field strength in eta direction (towards east).
-
-        Returns
-        -------
-        tuple containing the following:
-        
-        br : array-like
-            Radial component of unit vector of magnetic field.
-        btheta : array-like
-            Theta component of unit vector of magnetic field.
-        bphi : array-like
-            Phi component of unit vector of magnetic field.
-
-        """
-        Bmag = np.sqrt(Br**2 + Btheta**2 + Bphi**2)
-        br = Br/Bmag
-        btheta = Btheta/Bmag
-        bphi = Bphi/Bmag
-        return (br, btheta, bphi)    

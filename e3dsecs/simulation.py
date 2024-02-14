@@ -8,11 +8,29 @@ from gemini3d.grid.convert import geomag2geog
 import h5py
 
 class simulation:
-    def __init__(self, path, maph=200) -> None:
+    def __init__(self, path, maph=200, timeindex=-1) -> None:
+        """Initiate the simulation class
+         The Function read_sim() is called, and first look for the GEMINI dump
+         file 'gemini_dataset.nc' and 'gemini_grid.h5' that can be downloaded
+         from the Zenodo repo https://doi.org/10.5281/zenodo.10561479
+         
+         If not, it tries to read from the full simulation output in the 
+         same destination (path) and to generate the same files, based on the
+         timeindex keyword.
+        
+
+        Args:
+            path (str): path to the GEMINI simulation data
+            maph (int, optional): Mapping height. Defaults to 200 km.
+            timeindex (int, optional): Which time index from the GEMINI simulation 
+                to use. Defaults to -1.
+        """        
+        
         self.path = path
         self.maph = maph
-        self.read_sim()
         self.RE = 6371.2 #Earth radius in km
+        self.timeindex = timeindex
+        self.read_sim()
 
         
     def read_sim(self):
@@ -23,17 +41,17 @@ class simulation:
             self.dat = dat
             self.xg = xg
         except: # make the datafiles from reading GEMINI output
-            xg, dat = self.read_gemini(self.path, timeindex=-1, maph=self.maph)
-            dat.attrs={}
-            dat.to_netcdf(self.path + 'gemini_dataset.nc')
-            del xg['glatctr']
-            del xg['glonctr']
-            del xg['filename']
+            self.read_gemini(self.path, timeindex=self.timeindex)
+            _dat = self.dat
+            _dat.attrs={}
+            _dat.to_netcdf(self.path + 'gemini_dataset.nc')
+            _xg = self.xg
+            del _xg['glatctr']
+            del _xg['glonctr']
+            del _xg['filename']
             with h5py.File(self.path + 'gemini_grid.h5', 'w') as file:
-                for key, value in xg.items():
+                for key, value in _xg.items():
                     file.create_dataset(key, data=value)
-            self.dat = dat
-            self.xg = xg
 
 
     def read_hdf5_to_dict(self, file_path):
@@ -70,8 +88,6 @@ class simulation:
         timeindex : int, optional
             integer index describing which timestep in simulation to return. The 
             default is -1 corresponding to the last timestep.
-        maph : int or float, optional
-            The height to map ion velocities to. Default is 200 km.
         
 
         Returns
@@ -128,7 +144,7 @@ class simulation:
         also stores the E-field values in the native GEMINI grid in the dat structure.
         '''
         
-        self.gemini_gradient(self.xg, self.dat, q='Phitop')
+        self.gemini_gradient(q='Phitop')
         shape = self.dat.J1.shape
         E2 = -self.dat.gradPhitop_x2
         E3 = -self.dat.gradPhitop_x3

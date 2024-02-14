@@ -995,8 +995,8 @@ def snr_output_plot(covar_j, meshgrid, dat, grid, alts_grid, clim=2e-5,
                 glats = np.array([receivers[0][1], receivers[1][1], receivers[2][1]])
                 glons = np.array([receivers[0][2], receivers[1][2], receivers[2][2]])
                 x_, y_, z_ = coordinates.sph_to_car((RE+alts, 90-glats, glons), deg=True)
-                ax.scatter(x_, y_, z_, marker='*', c=['C0', 'C2', 'C1'])
-                ax2.scatter(x_, y_, z_, marker='*', c=['C0', 'C2', 'C1'])
+                ax.scatter(x_, y_, z_, marker='*', c=['C0', 'C1', 'C2'])
+                ax2.scatter(x_, y_, z_, marker='*', c=['C0', 'C1', 'C2'])
                 # Print height of hor cuts
                 # if (c=='k') & (pp==2):
                 #     alt = int(alt_ev[ind[ii],0,0])
@@ -1122,8 +1122,8 @@ def performance_plot(reconstructed_j, meshgrid, dat, grid, alts_grid, clim=2e-5,
                 glats = np.array([receivers[0][1], receivers[1][1], receivers[2][1]])
                 glons = np.array([receivers[0][2], receivers[1][2], receivers[2][2]])
                 x_, y_, z_ = coordinates.sph_to_car((RE+alts, 90-glats, glons), deg=True)
-                ax.scatter(x_, y_, z_, marker='*', c=['C0', 'C2', 'C1'])
-                ax2.scatter(x_, y_, z_, marker='*', c=['C0', 'C2', 'C1'])
+                ax.scatter(x_, y_, z_, marker='*', c=['C0', 'C1', 'C2'])
+                ax2.scatter(x_, y_, z_, marker='*', c=['C0', 'C1', 'C2'])
                 # Print alatitude of hor cuts
                 # if (c=='k') & (pp==2):
                 #     alt = int(alt_ev[ind[ii],0,0])
@@ -1222,7 +1222,7 @@ def output_plot(reconstructed_p, meshgrid, dat, grid, alts_grid, clim=2e-5,
                 glats = np.array([receivers[0][1], receivers[1][1], receivers[2][1]])
                 glons = np.array([receivers[0][2], receivers[1][2], receivers[2][2]])
                 x_, y_, z_ = coordinates.sph_to_car((RE+alts, 90-glats, glons), deg=True)
-                ax.scatter(x_, y_, z_, marker='*', c=['C0', 'C2', 'C1'])
+                ax.scatter(x_, y_, z_, marker='*', c=['C0', 'C1', 'C2'])
                 # Print alatitude of hor cuts
                 # if (c=='k') & (pp==2):
                 #     alt = int(alt_ev[ind[ii],0,0])

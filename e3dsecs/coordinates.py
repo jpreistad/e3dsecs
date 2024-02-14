@@ -409,3 +409,50 @@ def sph_to_car(sph, deg = True):
     return np.vstack((r * np.sin(theta * conv) * np.cos(phi * conv), 
                       r * np.sin(theta * conv) * np.sin(phi * conv), 
                       r * np.cos(theta * conv)))
+
+
+def enugg2enugm(enugg_vec, glon, glat):
+    """
+    Convert vector with ENU geographic components, located at glon, glat to 
+    ENU geomagnetic components.
+
+    Parameters
+    ----------
+    enugg_vec : 2D array
+        The vectors with ENU geographic components to convert. Shape must be N,3
+    glon : 1D array
+        Geographic longitudes of the location of the ENU vectors of size N
+    glat : 1D array
+        geographic latitudes of the location of the ENU vectors of size N.
+
+    Returns
+    -------
+    enugm_vec, a 2D array of size N,3 of the converted vectors
+
+    """
+
+    #Convert locations to dipole coordinate system
+    phi, theta = geog2geomag(glon, glat) # degrees input, radians out
+
+    # Convert geographic components (east,north) to dipole (east,north) components
+    # This is done by 1) computing the ECEF geographic components of the vecor,
+    # 2) rotate this into ECEF geomagnetic basis using matrices from pyGEMINI,
+    # 3) compute the corresponding ENU components (geomagnetic east, north)
+    # egglon, egglat, eggalt = unitvecs_geographic_general(datadict['mappedglon'][use], 
+    #                                     datadict['mappedglat'][use], dipole=False)
+    # 1) Project each geographic component (east,north, up) of the mapped velovity onto 
+    # the geographical ECEF directions (x,y,z)
+    xhat, yhat, zhat = unitvec_rthetaphi(glon, glat)
+    vx = xhat[:,0]*enugg_vec[:,2] - xhat[:,1]*enugg_vec[:,1] + xhat[:,2]*enugg_vec[:,0]
+    vy = yhat[:,0]*enugg_vec[:,2] - yhat[:,1]*enugg_vec[:,1] + yhat[:,2]*enugg_vec[:,0]
+    vz = zhat[:,0]*enugg_vec[:,2] - zhat[:,1]*enugg_vec[:,1] + zhat[:,2]*enugg_vec[:,0]
+    # 2) rotate gg->gm
+    v_ecef_gm = (convert.Rgg2gm()@(np.vstack((vx,vy,vz)))).T
+    # 3) go back to dipole east,north components    
+    rhat, thetahat, phihat = unitvec_xyz(np.degrees(phi), 90-np.degrees(theta))
+    vr = rhat[:,0]*v_ecef_gm[:,0] + rhat[:,1]*v_ecef_gm[:,1] + rhat[:,2]*v_ecef_gm[:,2]
+    vtheta = (thetahat[:,0]*v_ecef_gm[:,0] + thetahat[:,1]*v_ecef_gm[:,1] + thetahat[:,2]*v_ecef_gm[:,2])
+    vphi = phihat[:,0]*v_ecef_gm[:,0] + phihat[:,1]*v_ecef_gm[:,1] + phihat[:,2]*v_ecef_gm[:,2]
+    enugm_vec = np.vstack((vphi,-vtheta,vr)).T
+    
+    return enugm_vec
