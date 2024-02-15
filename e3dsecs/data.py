@@ -81,14 +81,16 @@ class data:
             # Make a lot of beams
             # Nrings = 5#18
             # __el = np.linspace(50,80,Nrings)
-            __el = np.array([45,50,60,70,80])
+            # __el = np.array([45,50,60,70,80])
+            __el = np.array([55,60,80])
             Nrings = __el.size
             Naz = 10
             __az = np.arange(0,360,360/Naz)
             el = np.tile(__el,Naz)
             _az = []
             _daz = 360/Naz/2
-            daz = np.array([0,_daz,0,_daz,0]) # alter the az value every other ring
+            # daz = np.array([0,_daz,0,_daz,0]) # alter the az value every other ring
+            daz = np.array([0,_daz,0]) # alter the az value every other ring
             # daz = np.array([i*360/Naz/Nrings for i in np.arange(5)])
             for a in __az:
                 _az.append(daz+a)
@@ -372,7 +374,8 @@ class data:
         '''
         
         exp = e3doubt.Experiment(el=self.el, az = self.az,h=self.alts, 
-                                transmitter=transmitter, receivers=receivers)
+                                transmitter=transmitter, receivers=receivers,
+                                resR=4)
 
         # exp.set_ionos('nuin',0)
         exp.run_models()

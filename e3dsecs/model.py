@@ -232,7 +232,7 @@ class model:
         # Regularize based on FAC value on top of domain
         if factop:
             G = self.make_L(grid.grid, grid.alts_grid)
-            _data = data.data(grid, simulation, beams=False, uniformmesh=True, lat_ev=grid.grid.lat, 
+            _data = data.data(grid, simulation, beams=False, points=True, lat_ev=grid.grid.lat, 
                               lon_ev=grid.grid.lon, 
                               alt_ev=np.ones(grid.grid.shape)*grid.alts_grid[-1]*.999, 
                               e3doubt_=False)
@@ -260,7 +260,7 @@ class model:
             G, inds = self.make_JHP(convection, simulation, grid, lat_ev.flatten(), lon_ev.flatten(), 
                             alt_ev.flatten(), inputmode='vi', hop='p', 
                             return_indices=True)
-            _data = data.data(grid, simulation, beams=False, uniformmesh=True, 
+            _data = data.data(grid, simulation, beams=False, points=True, 
                               lat_ev=lat_ev.flatten()[inds==1], lon_ev=lon_ev.flatten()[inds==1], 
                               alt_ev=alt_ev.flatten()[inds==1], e3doubt_=False)
 
@@ -1440,7 +1440,7 @@ class model:
         _lat, _lon, _alt, inds = self.remove_outside(grid.grid, grid.alts_grid, lat, lon, alt, 
                                                 ext_factor=-1, return_indices=True)  
 
-        _data = data.data(grid, simulation, beams=False, uniformmesh=True, lat_ev=_lat, 
+        _data = data.data(grid, simulation, beams=False, points=True, lat_ev=_lat, 
                             lon_ev=_lon, alt_ev=_alt, e3doubt_=False)
         
 
@@ -1585,7 +1585,7 @@ class model:
         __alt = grid.alts_grid[ks]
         _lat, _lon, _alt, inds = self.remove_outside(grid.grid, grid.alts_grid, lat, lon, __alt, 
                                                 ext_factor=-1, return_indices=True)  
-        _data = data.data(grid, simulation, beams=False, uniformmesh=True, lat_ev=_lat, 
+        _data = data.data(grid, simulation, beams=False, points=True, lat_ev=_lat, 
                             lon_ev=_lon, alt_ev=_alt, e3doubt_=False)        
         
         # Get the E-filed unit vectors    
@@ -1780,7 +1780,7 @@ class model:
             # Sample vertical profile of electron density above Tromsø
             glat = 67.3
             glon = 23.6
-            _data = data.data(grid, simulation, beams=False, uniformmesh=True, lat_ev=np.ones(height.size)*glat, 
+            _data = data.data(grid, simulation, beams=False, points=True, lat_ev=np.ones(height.size)*glat, 
                                 lon_ev=np.ones(height.size)*glon, alt_ev=height, e3doubt_=False)              
             ne = _data.ne
         elif lat is not None:
@@ -1790,7 +1790,7 @@ class model:
             _sps = []
             _shs = []
             for i in range(len(lat.flatten())):
-                _data = data.data(grid, simulation, beams=False, uniformmesh=True, lat_ev=np.ones(height.size)*lat[i], 
+                _data = data.data(grid, simulation, beams=False, points=True, lat_ev=np.ones(height.size)*lat[i], 
                                     lon_ev=np.ones(height.size)*lon[i], alt_ev=height, e3doubt_=False)                 
                 ne = _data.ne
                 sp = e*ne/Bmag * (c_brekke * omega_no)/(omega_no**2 + c_brekke**2)
@@ -1884,7 +1884,7 @@ class model:
     
     
     def crossvalidation(self, grid, simulation, convection, GTG, GTd, altreg, 
-                        inputmode='vi', steps=10):
+                        inputmode='vi', steps=12):
         '''
         Do the Generalized Cross Validation analysis to determine the l1 regularization
         parameter for 3D inversion.
@@ -1953,7 +1953,7 @@ class model:
         eta_e = grid.grid.eta[1:,0]- grid.grid.deta/2
         alt_ev, eta_ev, xi_ev = np.meshgrid(alts__, eta_e, xi_e, indexing='ij')
         lon_ev, lat_ev = grid.grid.projection.cube2geo(xi_ev, eta_ev)
-        _data = data.data(grid, simulation, beams=False, uniformmesh=True, lat_ev=lat_ev, 
+        _data = data.data(grid, simulation, beams=False, points=True, lat_ev=lat_ev, 
                             lon_ev=lon_ev, alt_ev=alt_ev, e3doubt_=False)
         if not 'phitop' in inputmode:
             vperp = convection.get_E_from_lmodel(simulation, _data, returnvperp=True)
@@ -1970,7 +1970,7 @@ class model:
 
         # Inversion
         gtg_mag = np.median(np.diagonal(GTG))
-        ls = np.linspace(-7,4,steps)
+        ls = np.linspace(-9,4,steps)
         resnorm = []
         modelnorm = []
         print('Printing: lambda1, residual norm, model norm')
@@ -1985,8 +1985,6 @@ class model:
             modelnorm.append(np.sqrt(np.sum(m**2)))
             print(l, np.sqrt(np.sum(res**2)), np.sqrt(np.sum(m**2)))
         plt.figure()
-        print(resnorm)
-        print(modelnorm)
         plt.plot(ls, resnorm)
         plt.scatter(ls, resnorm)
         # plt.ylim(0,0.1)
