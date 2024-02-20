@@ -78,6 +78,9 @@ def compare_input_jperp(dat, jjj2, inside, savesuff, secs_grid, alts_grid,
         ppp2 = np.zeros(dat.shape)
         ppp2[~inside.reshape(dat.shape)] = np.nan
         ppp2[inside.reshape(dat.shape)] = _ppp2
+        
+        # diffs = 100 * (ppp1[0:8,:,sliceindex] - ppp2[0:8,:,sliceindex])/(ppp1[0:8,:,sliceindex])
+        # plt.hist(diffs.flatten(), range=(-100,100), bins=40)
     
     for sliceindex in slices:
         fig = plt.figure(figsize = (30, 10))
@@ -768,26 +771,21 @@ def scatterplot_reconstruction(grid, alts_grid, dat, lon, lat, alt, full_j, jpar
     ax.set_ylim(-140,70)
     ax.set_xlim(-140,70)
     
-    residuals_e = dat.je*1e6 - 1e6*full_j[2*N:3*N]
-    rmse_cv_e = np.linalg.norm(residuals_e)#/np.mean(np.abs(dat.je*1e6))
+    RMSE_e = np.sqrt(np.mean((dat.je*1e6 - 1e6*full_j[2*N:3*N])**2))
     corr_e = np.corrcoef(dat.je, full_j[2*N:3*N])[0,1]
-    residuals_n = dat.jn*1e6 + 1e6*full_j[1*N:2*N]
-    rmse_cv_n = np.linalg.norm(residuals_n)#/np.mean(np.abs(dat.jn*1e6))
+    RMSE_n = np.sqrt(np.mean((dat.jn*1e6 + 1e6*full_j[1*N:2*N])**2))
     corr_n = np.corrcoef(dat.jn, -full_j[1*N:2*N])[0,1]
-    residuals_u = dat.ju*1e6 - 1e6*full_j[0*N:1*N]
-    rmse_cv_u = np.linalg.norm(residuals_u)#/np.mean(np.abs(dat.ju*1e6))
+    RMSE_u = np.sqrt(np.mean((dat.ju*1e6 - 1e6*full_j[0*N:1*N])**2))
     corr_u = np.corrcoef(dat.ju, full_j[0*N:1*N])[0,1]
-    residuals_fac = dat.fac[highalt]*1e6 - 1e6*jpar[highalt]
-    rmse_cv_fac = np.linalg.norm(residuals_fac)#/np.mean(np.abs(dat.fac*1e6))
+    RMSE_fac = np.sqrt(np.mean((dat.fac[highalt]*1e6 - 1e6*jpar[highalt])**2))
     corr_fac = np.corrcoef(dat.fac[highalt], jpar[highalt])[0,1]
 
     ax.text(15, -60, 'RMSE $[\mu A/m^2], r$', color='black', ha='left')   
-    ax.text(50, -75, '%5i,   %4.2f' % (rmse_cv_u, corr_u), color='C0', ha='right')
-    ax.text(50, -90, '%5i,   %4.2f' % (rmse_cv_n, corr_n), color='C1', ha='right')
-    ax.text(50, -105, '%5i,   %4.2f' % (rmse_cv_e, corr_e), color='C2', ha='right')
-    ax.text(50, -120, '%5i,   %4.2f' % (rmse_cv_fac, corr_fac), color='C3', ha='right')
+    ax.text(50, -75, '%4.1f,   %4.2f' % (RMSE_u, corr_u), color='C0', ha='right')
+    ax.text(50, -90, '%4.1f,   %4.2f' % (RMSE_n, corr_n), color='C1', ha='right')
+    ax.text(50, -105, '%4.1f,   %4.2f' % (RMSE_e, corr_e), color='C2', ha='right')
+    ax.text(50, -120, '%4.1f,   %4.2f' % (RMSE_fac, corr_fac), color='C3', ha='right')
 
-    
     return fig
     
     # sum(np.abs(residual_r/d[0:N])<0.2)/N
@@ -855,14 +853,21 @@ def scatterplot_lompe(ax, sim, dat, conv, gr):
 
     enugg_vec = conv.get_E_from_lmodel(sim, dat, returnvperp=True).T
     
-    residuals_e = np.linalg.norm(dat.vperpmappede[use] - enugg_vec[use,0])
-    residuals_n = np.linalg.norm(dat.vperpmappedn[use] - enugg_vec[use,1])
-    residuals_u = np.linalg.norm(dat.vperpmappedu[use] - enugg_vec[use,2])
-    resmag = np.sqrt(residuals_e**2+residuals_n**2+residuals_u**2)
+    RMSE_e = np.sqrt(np.mean((dat.vperpmappede[use] - enugg_vec[use,0])**2))
+    RMSE_n = np.sqrt(np.mean((dat.vperpmappedn[use] - enugg_vec[use,1])**2))
+    RMSE_u = np.sqrt(np.mean((dat.vperpmappedu[use] - enugg_vec[use,2])**2))
+    RMSE = np.mean(np.array([RMSE_e, RMSE_n, RMSE_u]))
+    residuals_e = dat.vperpmappede[use] - enugg_vec[use,0]
+    residuals_n = dat.vperpmappedn[use] - enugg_vec[use,1]
+    residuals_u = dat.vperpmappedu[use] - enugg_vec[use,2]
+    residuals = np.sqrt(residuals_e**2 + residuals_n**2 + residuals_u**2)
+    large = residuals > 100
+    frac = 100 * sum(large)/residuals.size
+    print('%2i percent of residuals > 100 m/s' % frac)
 
-    ax.scatter(dat.vperpmappede[use], enugg_vec[use,0], label='$v_\perp$ east', alpha=0.1)
-    ax.scatter(dat.vperpmappedn[use], enugg_vec[use,1], label='$v_\perp$ north', alpha=0.1)
-    ax.scatter(dat.vperpmappedu[use], enugg_vec[use,2], label='$v_\perp$ up', alpha=0.1)
+    ax.scatter(dat.vperpmappede[use], enugg_vec[use,0], label='$v_\perp$ east', alpha=0.1, color='C0')
+    ax.scatter(dat.vperpmappedn[use], enugg_vec[use,1], label='$v_\perp$ north', alpha=0.1, color='C1')
+    ax.scatter(dat.vperpmappedu[use], enugg_vec[use,2], label='$v_\perp$ up', alpha=0.1, color='C2')
     ax.legend(frameon=False)
     # ax.set_xlabel('True value, no noise [m/s]')
     # ax.set_ylabel('Estimate from noisy data [m/s]')
@@ -879,7 +884,10 @@ def scatterplot_lompe(ax, sim, dat, conv, gr):
     ax.plot(xx,xx, color='black')
     
     # Residuals:
-    ax.text(-1800,-150, 'RMSE: %i m/s' % resmag)
+    ax.text(-1800,-150, 'RMSE [m/s]:')
+    ax.text(-1825,-250, '%3i' % RMSE_e, color='C0')
+    ax.text(-1825,-350, '%3i' % RMSE_n, color='C1')
+    ax.text(-1825,-450, '%3i' % RMSE_u, color='C2')
 
     
     # extent = np.max(np.abs(np.hstack((ax.get_xlim(), ax.get_ylim()))))
@@ -912,7 +920,8 @@ def scatterplot_lompe(ax, sim, dat, conv, gr):
 def snr_output_plot(covar_j, meshgrid, dat, grid, alts_grid, clim=2e-5, 
                     cut='j', ind=5, transmitter=('ski_mod', 67.5, 23.7), 
                     receivers=[('ski_mod', 67.5, 23.7),
-                     ('krs_mod', 66.55, 25.92), ('kai_mod', 66.48, 22.54)]):
+                     ('krs_mod', 66.55, 25.92), ('kai_mod', 66.48, 22.54)],
+                    climsnr=1):
 
     datadict = dat.__dict__
 
@@ -989,7 +998,7 @@ def snr_output_plot(covar_j, meshgrid, dat, grid, alts_grid, clim=2e-5,
             for ii, c in enumerate(cut):
                 ax = visualization.plotslice(ax,(alt_ev,lat_ev,lon_ev), noise, cut=c, ind=ind[ii], clim=clim)
                 ax2 = visualization.plotslice(ax2,(alt_ev,lat_ev,lon_ev), np.abs(signal)/noise, cut=c, 
-                                         ind=ind[ii], clim=5, diverging=False, cmap='viridis')
+                                         ind=ind[ii], clim=climsnr, diverging=False, cmap='viridis')
                 # Plot the radar site locations
                 alts = np.ones(3)*0.01
                 glats = np.array([receivers[0][1], receivers[1][1], receivers[2][1]])
@@ -1010,7 +1019,7 @@ def snr_output_plot(covar_j, meshgrid, dat, grid, alts_grid, clim=2e-5,
     cbarax = plt.subplot2grid((20,32), (10, 31), rowspan = 8, colspan = 1)
     cmap = plt.cm.viridis
     import matplotlib as mpl
-    norm = mpl.colors.Normalize(vmin=0, vmax=5)
+    norm = mpl.colors.Normalize(vmin=0, vmax=climsnr)
     cb1 = mpl.colorbar.ColorbarBase(cbarax, cmap=cmap,
                                 norm=norm,
                                 orientation='vertical')

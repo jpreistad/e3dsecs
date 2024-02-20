@@ -1970,7 +1970,7 @@ class model:
 
         # Inversion
         gtg_mag = np.median(np.diagonal(GTG))
-        ls = np.linspace(-9,4,steps)
+        ls = np.linspace(-7,3,steps)
         resnorm = []
         modelnorm = []
         print('Printing: lambda1, residual norm, model norm')

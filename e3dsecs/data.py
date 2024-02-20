@@ -8,10 +8,10 @@ import dipole
 
 class data:
 
-    def __init__(self, grid, simulation, beams=True, sitelat=67.36, sitephi=23.,
-                 az=None, el=None, points=False, lat_ev=None, lon_ev=None, 
+    def __init__(self, grid, simulation, beams=True, points=False, sitelat=67.36, sitephi=23.,
+                 az=None, el=None, lat_ev=None, lon_ev=None, 
                  alt_ev=None, e3doubt_=True, intsec = 5*60, min_alt=90, 
-                 max_alt=500, dr=4, tempfile='datadict_temp.npy') -> None:
+                 max_alt=500, dr=4, tempfile='datadict_temp.npy', seed=None) -> None:
         """_summary_
 
         Args:
@@ -20,6 +20,24 @@ class data:
             beams (bool, optional): Whether to sample along beams. Defaults to True.
             points (bool, optional): Whether to rather sample at spevific points, provided
                 in lat_ev, lon_ev, alt_ev
+            sitelat (floatm optional): Geographic latitude of main E3D site, degrees
+            sitephi (floatm optional): Geographic longitude of main E3D site, degrees
+            az (array, optional): Azimuth angle of beams to sample along, in degrees.
+            el (array, optional): Elevation angle of beams to sample along, in degrees.
+            lat_ev (array-like, optional): If provided, beams must be False and points=True. 
+                nD array of latitudes in degrees geographic of where to sample
+            lon_ev (array-like, optional): If provided, beams must be False and points=True. 
+                nD array of longitudes in degrees geographic of where to sample                
+            alt_ev (array-like, optional): If provided, beams must be False and points=True. 
+                nD array of altitudes in km of where to sample                
+            e3doubt_ (bool, optional): Wheter to add noise based on e3doubt. Only applies 
+                when beams=True
+            intsec (int, optional): seconds of integration to use in e3doubt
+            min_alt (int or float, optional): Where to start sample, in km
+            max_alt (int or float, optional): Where to stop sample, in km
+            dr (int or float, optional): Altitude separation between evaluation locations along beams.
+            tempfile (str, optional): e3doubt save file to look for
+            seed (int or None, optional): To generate seed states for sampling noise.
         """ 
         
         self.RE = grid.RE
@@ -33,7 +51,10 @@ class data:
                                min_alt=min_alt, max_alt=max_alt, dr=dr)
         elif points == True:
             self.sample_points(grid, simulation, lat_ev=lat_ev, lon_ev=lon_ev, alt_ev=alt_ev)
-            
+        else:
+            print('Inconsistent combination of keywords beams and points. Will return None object.')
+            return None
+        
         if e3doubt_:
             try: #Try to use an existing file, since the e3doubt calculations take a while
                 loaded = np.load('./inversion_coefs/'+tempfile, allow_pickle=True).item()
@@ -42,7 +63,7 @@ class data:
                 print('Using existing sampling file with estimated variances from E3DOUBT')
             except:            
                 self.get_variances(tempfile=tempfile)
-            self.add_noise()
+            self.add_noise(seed=seed)
         
             
     def sample_eiscat(self, simulation, dr = 4, az=None, el=None, sitelat=67.36, sitephi=23., 
@@ -82,7 +103,7 @@ class data:
             # Nrings = 5#18
             # __el = np.linspace(50,80,Nrings)
             # __el = np.array([45,50,60,70,80])
-            __el = np.array([55,60,80])
+            __el = np.array([55,65,75])
             Nrings = __el.size
             Naz = 10
             __az = np.arange(0,360,360/Naz)
@@ -433,7 +454,7 @@ class data:
                     setattr(self, key, ddict[key][:,:,use])
 
 
-    def add_noise(self):
+    def add_noise(self, seed=None):
         '''
         Add noise to the samples from GEMINI by using the covariace matrix obtained 
         from E3DOUBT.
@@ -464,12 +485,19 @@ class data:
         _perp = np.eye(3)
         _perp[0,0] = 0 # select only perp components in GEMINI basis
     
+        # Make the seeds
+        if seed is not None:
+            self.seed = seed
+            seed = np.arange(N)*seed
+        else:
+            seed = [None]*N
+    
         # Alternative approach: First add noise to full v, then estimate vperp and vmappedperp
         for i in range(N): 
             # Noise in velocity observations   
             cov = self.cov_vi[:,:,i]
             vi = np.hstack((self.ve[i], self.vn[i], self.vu[i]))
-            _noise = multivariate_normal(mean=np.zeros(3), cov=cov)
+            _noise = multivariate_normal(mean=np.zeros(3), cov=cov, seed=seed[i])
             noisy_obs = np.hstack((vi + _noise.rvs()))
             vperp_noisy = Gperp[:,:,i].dot(noisy_obs)
             vperpmapped_noisy = Gperpmapped[:,:,i].dot(noisy_obs)
@@ -479,7 +507,7 @@ class data:
             vperpmapped_enu_noisy[i,:] = vperpmapped_noisy
 
             # Noise in electron density observations
-            _noise = multivariate_normal(mean=0, cov=self.var_ne[i])
+            _noise = multivariate_normal(mean=0, cov=self.var_ne[i], seed=seed[i])
             ne_noisy[i] = self.ne[i] + _noise.rvs()
             
         # update ddict with the added noise
