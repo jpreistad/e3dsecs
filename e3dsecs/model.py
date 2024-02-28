@@ -409,7 +409,7 @@ class model:
     
 
     def make_inputdict(self, data, grid, inputmode='vi', ext_factor=-1, 
-                    hp_from_brekke=False):
+                    hp_from_brekke=False, allalts=False):
         '''
         Prepare sampled GEMINI data to input in 3D inversion (jperp). Remove nans and 
         data outside the inner grid region, controlled by the ext_factor keyword. Its
@@ -450,7 +450,9 @@ class model:
             estimated with formulaes from Brekke book. If not, it uses the self-
             consistent values from GEMINI. Default is False. This has no influence
             when using vi-ve to estimate perp.
-        
+        allalts: bool
+            If True, inputdict returns jperp estimates at all altitudes. If not, only obs
+            below maph is used.
         Returns
         -------
         data : instance of data class
@@ -548,7 +550,10 @@ class model:
 
         # Remove data/evaluation points outside grid in vertical direction
         k0 = self.get_alt_index(grid.alts_grid, data.alt[use], returnfloat=True)
-        inside = (k0 >= 0) & (k0<grid.alts_grid.size-1)
+        if allalts:
+            inside = (k0 >= 0) & (k0<grid.alts_grid.size-1)
+        else:
+            inside = (k0 >= 0) & (k0<grid.alts_grid[grid.alts_grid<data.maph].size)
         inds = np.zeros(use.size).astype(int)
         temp = np.zeros(sum(use))
         temp[inside] = 1

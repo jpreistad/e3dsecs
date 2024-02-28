@@ -223,7 +223,7 @@ def compare_potentials(dat, grid, alts_grid, datadict, inside, model, dipole_lom
     
 def plot_analysis_grid(datadict, grid, alts_grid, lat_ev, lon_ev, alt_ev, dipole_lompe=False, 
                        data=True, eiscat=True, _d=400, boxgrid=False, q='fac', clim=2e-5, 
-                       cmap='bwr', diverging=True, ax=None):
+                       cmap='bwr', diverging=True, ax=None, maxh=None):
     '''
     Make a plot of the inversion grid and data selection grid, and possibly also some data
     to aid the tuning of the grids to be used
@@ -265,6 +265,10 @@ def plot_analysis_grid(datadict, grid, alts_grid, lat_ev, lon_ev, alt_ev, dipole
         The colormap to use. Default us bwr.
     diverging : boolean
         Whether to use a diverging colormap. Default is true-
+    maxh : bool
+        The maximum altitude to plot (in the E3D scatterplot case). Default is None
+        leading to a scatterplor of all data. Alternatively an int or float could be
+        passed, representing the maximum altitude in km to show in the plot.
     
 
     Returns
@@ -302,7 +306,9 @@ def plot_analysis_grid(datadict, grid, alts_grid, lat_ev, lon_ev, alt_ev, dipole
                               datadict['lon'].flatten()), deg=True)
 
         if eiscat:
-            keep = datadict['alt'] <= alts_grid[-1]
+            if maxh is None: 
+                maxh = alts_grid[-1]
+            keep = datadict['alt'] <= maxh
             x = x[keep]
             y = y[keep]
             z = z[keep]
