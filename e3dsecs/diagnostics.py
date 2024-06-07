@@ -112,13 +112,13 @@ def compare_input_jperp(dat, jjj2, inside, savesuff, secs_grid, alts_grid,
         cbarax = plt.axes((0.37,0.2,0.3,0.02))
         # cbarax = plt.subplot2grid((1,3), (0, 1), rowspan = 1, colspan = 1)
         cmap = plt.cm.bwr
-        norm = mpl.colors.Normalize(vmin=-clim, vmax=clim)
+        norm = mpl.colors.Normalize(vmin=-clim*1e6, vmax=clim*1e6)
         cb1 = mpl.colorbar.ColorbarBase(cbarax, cmap=cmap,
                                     norm=norm,
                                     orientation='horizontal')
         cb1.ax.tick_params(labelsize=16)
         cb1.ax.xaxis.get_offset_text().set_fontsize(16)
-        cb1.set_label('[A/m$^2$]', fontsize=16)
+        cb1.set_label('[$\mu$A/m$^2$]', fontsize=16)
         # if pdf:
         #     savename = './comparison_'+param+'_dim='+str(dim)+savesuff+'%03i.pdf' % sliceindex
         # else:
@@ -287,7 +287,9 @@ def plot_analysis_grid(datadict, grid, alts_grid, lat_ev, lon_ev, alt_ev, dipole
         fig = plt.figure(figsize = (10, 10))
         ax = fig.add_subplot(111, projection='3d')
     ax.set_axis_off()
-    ax.view_init(azim=-26, elev=7)
+    ax.view_init(azim=-3, elev=12, roll=8) # changed during revision
+#    ax.view_init(azim=-26, elev=7)
+
     if boxgrid:
         visualization.spherical_grid(ax, lat_ev, lon_ev, alt_ev, color='blue', maph=datadict['maph'])
     visualization.field_aligned_grid(ax, grid, alts_grid, color='green', dipoleB=dipole_lompe, coastlines=False)
@@ -993,7 +995,7 @@ def snr_output_plot(covar_j, meshgrid, dat, grid, alts_grid, clim=2e-5,
         ax2 = visualization.field_aligned_grid(ax2, grid, alts_grid, color='green', dipoleB=False, **kwargs, coastlines=False)
         ax2.set_title(plot_titles2[pp], fontsize=16)
         if pp==2:
-            x_, y_, z_ = coordinates.sph_to_car((RE+0, 90-74, 37), deg=True)
+            x_, y_, z_ = coordinates.sph_to_car((RE+0, 90-74, 30), deg=True)
             ax.text(x_[0], y_[0], z_[0], 'Uncertainty', fontsize=16)
             ax2.text(x_[0], y_[0], z_[0], 'SNR', fontsize=16)
         if type(cut) == str:
@@ -1036,11 +1038,11 @@ def snr_output_plot(covar_j, meshgrid, dat, grid, alts_grid, clim=2e-5,
     cbarax = plt.subplot2grid((20,32), (0, 31), rowspan = 8, colspan = 1)
     cmap = plt.cm.bwr
     import matplotlib as mpl
-    norm = mpl.colors.Normalize(vmin=-clim, vmax=clim)
+    norm = mpl.colors.Normalize(vmin=-clim*1e6, vmax=clim*1e6)
     cb2 = mpl.colorbar.ColorbarBase(cbarax, cmap=cmap,
                                 norm=norm,
                                 orientation='vertical')
-    cb2.set_label('[A/m$^2$]', fontsize=16)
+    cb2.set_label('[$\mu$A/m$^2$]', fontsize=16)
     cb2.ax.yaxis.set_label_coords(-1.3, 0.5)                
     
     return fig
@@ -1122,7 +1124,7 @@ def performance_plot(reconstructed_j, meshgrid, dat, grid, alts_grid, clim=2e-5,
         ax2 = visualization.field_aligned_grid(ax2, grid, alts_grid, color='green', dipoleB=False, **kwargs, coastlines=False)
         ax2.set_title(plot_titles2[pp], fontsize=16)
         if pp==2:
-            x_, y_, z_ = coordinates.sph_to_car((RE+0, 90-74, 37), deg=True)
+            x_, y_, z_ = coordinates.sph_to_car((RE+0, 90-74, 30), deg=True)
             ax.text(x_[0], y_[0], z_[0], 'GEMINI', fontsize=16, zorder=10)
             ax2.text(x_[0], y_[0], z_[0], '3D reconstruction', fontsize=16, zorder=10)
         if type(cut) == str:
@@ -1151,11 +1153,11 @@ def performance_plot(reconstructed_j, meshgrid, dat, grid, alts_grid, clim=2e-5,
     cbarax = plt.subplot2grid((20,32), (5, 31), rowspan = 10, colspan = 1)
     cmap = plt.cm.bwr
     import matplotlib as mpl
-    norm = mpl.colors.Normalize(vmin=-clim, vmax=clim)
+    norm = mpl.colors.Normalize(vmin=-clim*1e6, vmax=clim*1e6)
     cb1 = mpl.colorbar.ColorbarBase(cbarax, cmap=cmap,
                                 norm=norm,
                                 orientation='vertical')
-    cb1.set_label('[A/m$^2$]', fontsize=16)
+    cb1.set_label('[$\mu$A/m$^2$]', fontsize=16)
     cb1.ax.yaxis.set_label_coords(-1.3, 0.5)            
     
     return fig
@@ -1225,7 +1227,7 @@ def output_plot(reconstructed_p, meshgrid, dat, grid, alts_grid, clim=2e-5,
         ax = visualization.field_aligned_grid(ax, grid, alts_grid, color='green', dipoleB=False, **kwargs, coastlines=False)
         ax.set_title(plot_titles[pp], fontsize=16)
         if pp==2:
-            x_, y_, z_ = coordinates.sph_to_car((RE+0, 90-74, 37), deg=True)
+            x_, y_, z_ = coordinates.sph_to_car((RE+0, 90-74, 30), deg=True)
             ax.text(x_[0], y_[0], z_[0], '3D reconstruction', fontsize=16, zorder=10)
         if type(cut) == str:
             ax = visualization.plotslice(ax,(alt_ev,lat_ev,lon_ev), _j, cut=cut, clim=clim) 

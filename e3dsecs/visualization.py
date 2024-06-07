@@ -354,7 +354,7 @@ def field_aligned_grid(ax, grid, alts_grid, color='green', showlayers=False,
     x_, y_, z_ = coordinates.sph_to_car((RE+alts, 90-lats, lons), deg=True)
     ax.plot(x_, y_, z_, color='black', zorder=100)
     for (ii,aa) in enumerate(alts):
-        ax.text(x_[ii], y_[ii], z_[ii], str(aa)+' km', ha='right', zorder=100, clip_on=True)
+        ax.text(x_[ii], y_[ii], z_[ii], str(aa)+' km', ha='right', zorder=100)#, clip_on=True)
     
     return ax
 
@@ -613,8 +613,8 @@ def plot_resolution(ax, grid, alts_grid, kij, psf, az=-26, el=7, clim=1e-6,
         ax.set_title('PSF at k='+str(k)+', i='+str(i)+', j='+str(j))
         
         
-def plot_slice(ax, grid, alts_grid, lat, lon, alt, data, clim = 5e-5, azim=-20, 
-               elev=7, dipole_lompe=True, dim = 0, sliceindex = 0, parameter='No name', 
+def plot_slice(ax, grid, alts_grid, lat, lon, alt, data, clim = 5e-5, azim=-3, 
+               elev=12, dipole_lompe=True, dim = 0, sliceindex = 0, parameter='No name', 
                maph=None, coastlines=True):
     '''
     Plot a slice on a 3D plot of a choosen quantity from a data-cube
@@ -633,7 +633,8 @@ def plot_slice(ax, grid, alts_grid, lat, lon, alt, data, clim = 5e-5, azim=-20,
         containing the altitude in km of the centre of the data-cube values
     data : 3D array
         containing the values to display at the specified locations
-        
+    azim (float): -20. Projection setting
+    elev (float): 7. Projection setting.
 
     Returns
     -------
@@ -644,10 +645,10 @@ def plot_slice(ax, grid, alts_grid, lat, lon, alt, data, clim = 5e-5, azim=-20,
     alts__ = alt.reshape(shape)[:,5,0]
     
     cmap = plt.cm.bwr
-    norm = matplotlib.colors.Normalize(vmin=-clim, vmax=clim)
+    norm = matplotlib.colors.Normalize(vmin=-clim*1e6, vmax=clim*1e6)
     
     ax.set_axis_off()
-    ax.view_init(azim=azim, elev=elev)
+    ax.view_init(azim=azim, elev=elev, roll=8)
     # spherical_grid(ax, lat, lon, alt, color='blue')
     field_aligned_grid(ax, grid, alts__, color='green', dipoleB=dipole_lompe, coastlines=coastlines)
     kwargs={'linewidth':3}
@@ -659,7 +660,7 @@ def plot_slice(ax, grid, alts_grid, lat, lon, alt, data, clim = 5e-5, azim=-20,
     if dim == 0:
         p = ax.plot_surface(x.reshape(shape)[sliceindex,:,:], y.reshape(shape)[sliceindex,:,:], 
                             z.reshape(shape)[sliceindex,:,:], alpha=0.5,
-                            facecolors=cmap(norm(data.reshape(shape)[sliceindex,:,:])), 
+                            facecolors=cmap(norm(data.reshape(shape)[sliceindex,:,:]*1e6)), 
                             rcount = np.max(shape), ccount = np.max(shape),cmap=cmap)
         if maph is not None:
             N = shape[1]
@@ -670,7 +671,7 @@ def plot_slice(ax, grid, alts_grid, lat, lon, alt, data, clim = 5e-5, azim=-20,
     elif dim == 1:
         p = ax.plot_surface(x.reshape(shape)[:,sliceindex,:], y.reshape(shape)[:,sliceindex,:], 
                             z.reshape(shape)[:,sliceindex,:], alpha=0.5,
-                            facecolors=cmap(norm(data.reshape(shape)[:,sliceindex,:])), 
+                            facecolors=cmap(norm(data.reshape(shape)[:,sliceindex,:]*1e6)), 
                             rcount = np.max(shape[0:]), ccount = np.max(shape[0:]), cmap=cmap)
         if maph is not None:
             N = shape[2]
@@ -681,7 +682,7 @@ def plot_slice(ax, grid, alts_grid, lat, lon, alt, data, clim = 5e-5, azim=-20,
     elif dim == 2:
         p = ax.plot_surface(x.reshape(shape)[:,:,sliceindex], y.reshape(shape)[:,:,sliceindex], 
                             z.reshape(shape)[:,:,sliceindex], alpha=0.5,
-                            facecolors=cmap(norm(data.reshape(shape)[:,:,sliceindex])), 
+                            facecolors=cmap(norm(data.reshape(shape)[:,:,sliceindex]*1e6)), 
                             rcount = np.max(shape), ccount = np.max(shape),cmap=cmap)
         if maph is not None:
             N = shape[1]
@@ -761,7 +762,9 @@ def plotslice(ax, meshgrid, q, cut='k', ind=0, clim=1e-5, cmap='bwr', diverging=
     
     cmap = matplotlib.pyplot.get_cmap(name=cmap)
     ax.set_axis_off()
-    ax.view_init(azim=-26, elev=7)
+#    ax.view_init(azim=-26, elev=7)
+    ax.view_init(azim=-3, elev=12, roll=8)
+
     # visualization.spherical_grid(ax, lat_ev, lon_ev, alt_ev, color='blue')
     # visualization.field_aligned_grid(ax, grid, alts_grid, color='green', dipoleB=dipolekw)
 
@@ -789,7 +792,7 @@ def plotslice(ax, meshgrid, q, cut='k', ind=0, clim=1e-5, cmap='bwr', diverging=
 
     x0, y0, z0 = coordinates.sph_to_car((RE+0, 90-lat_ev[0,shape[1]//2,shape[2]//2], lon_ev[0,shape[1]//2,shape[2]//2]), deg=True)
 
-    range_ =  alt_ev[-1,0,0]*0.3
+    range_ =  alt_ev[-1,0,0]*0.32
     ax.set_xlim(x0[0]-range_, x0[0]+range_)
     ax.set_ylim(y0[0]-range_, y0[0]+range_)
     ax.set_zlim(z0[0], z0[0]+2*range_) 
