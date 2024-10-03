@@ -203,7 +203,10 @@ def plot_hor_segment(ax, mlons, mlats, alt, color='green', dipoleB=False, **kwar
 
 def field_aligned_grid(ax, grid, alts_grid, color='green', showlayers=False, 
                        showbase=True, fullbox=False, verticalcorners=False, 
-                       dipoleB=False, coastlines=True, **kwargs):
+                       dipoleB=False, coastlines=True, label_alt=True,
+                       altlabelsize=12,
+                       max_alt=500.,
+                       **kwargs):
     '''
     Make 3D plot of volume spanned by CS grid following a field line from its
     central location
@@ -353,8 +356,11 @@ def field_aligned_grid(ax, grid, alts_grid, color='green', showlayers=False,
     pos = grid.projection.position
     x_, y_, z_ = coordinates.sph_to_car((RE+alts, 90-lats, lons), deg=True)
     ax.plot(x_, y_, z_, color='black', zorder=100)
-    for (ii,aa) in enumerate(alts):
-        ax.text(x_[ii], y_[ii], z_[ii], str(aa)+' km', ha='right', zorder=100)#, clip_on=True)
+    if label_alt:
+        for (ii,aa) in enumerate(alts):
+            if aa <= max_alt:
+                ax.text(x_[ii], y_[ii], z_[ii], str(aa)+' km', ha='right', zorder=100, clip_on=False,
+                        fontsize=altlabelsize)
     
     return ax
 
@@ -491,7 +497,7 @@ def plot_field_line(ax, glat0, glon0, alts_grid, color='grey', dipoleB=False, **
         ax.plot(xs,ys,zs, color=color, alpha=0.5, **kwargs)
 
 
-def plot_resolution(ax, grid, alts_grid, kij, psf, az=-26, el=7, clim=1e-6, 
+def plot_resolution(ax, grid, alts_grid, kij, psf, az=-26, el=7, roll=0., clim=1e-6, 
                    planes=[0,1], dipoleB=True, alpha=0.5, absolute=False, range_p=0.3):
     '''
     A problem here with the dipoleB keyword is that it is used for two different
@@ -523,7 +529,7 @@ def plot_resolution(ax, grid, alts_grid, kij, psf, az=-26, el=7, clim=1e-6,
     J = grid.shape[1]  #Number of cells in xi direction 
     k ,i, j = np.unravel_index(kij, (K,I,J))
 
-    ax.view_init(azim=az, elev=el)
+    ax.view_init(azim=az, elev=el, roll=roll)
     field_aligned_grid(ax, grid, alts_grid, color='green', dipoleB=dipoleB)
     kwargs={'linewidth':3}
 
@@ -613,9 +619,11 @@ def plot_resolution(ax, grid, alts_grid, kij, psf, az=-26, el=7, clim=1e-6,
         ax.set_title('PSF at k='+str(k)+', i='+str(i)+', j='+str(j))
         
         
-def plot_slice(ax, grid, alts_grid, lat, lon, alt, data, clim = 5e-5, azim=-3, 
-               elev=12, dipole_lompe=True, dim = 0, sliceindex = 0, parameter='No name', 
-               maph=None, coastlines=True):
+def plot_slice(ax, grid, alts_grid, lat, lon, alt, data, clim = 5e-5,
+               azim=-3, elev=12, roll=8,
+               # azim=-20, elev=7, roll=0,
+               dipole_lompe=True, dim = 0, sliceindex = 0, parameter='No name', 
+               maph=None, coastlines=True,label_alt=True):
     '''
     Plot a slice on a 3D plot of a choosen quantity from a data-cube
     
@@ -648,9 +656,9 @@ def plot_slice(ax, grid, alts_grid, lat, lon, alt, data, clim = 5e-5, azim=-3,
     norm = matplotlib.colors.Normalize(vmin=-clim*1e6, vmax=clim*1e6)
     
     ax.set_axis_off()
-    ax.view_init(azim=azim, elev=elev, roll=8)
+    ax.view_init(azim=azim, elev=elev, roll=roll)
     # spherical_grid(ax, lat, lon, alt, color='blue')
-    field_aligned_grid(ax, grid, alts__, color='green', dipoleB=dipole_lompe, coastlines=coastlines)
+    field_aligned_grid(ax, grid, alts__, color='green', dipoleB=dipole_lompe, coastlines=coastlines,label_alt=label_alt)
     kwargs={'linewidth':3}
     for kk in range(lat[0,-1,:].size):
         plot_field_line(ax, lat[0,-1,kk], lon[0,-1,kk], 
@@ -732,7 +740,9 @@ def make_gif(files, filename=None, delete=True, duration = 10):
             os.remove(f)
 
 
-def plotslice(ax, meshgrid, q, cut='k', ind=0, clim=1e-5, cmap='bwr', diverging=True):
+def plotslice(ax, meshgrid, q, cut='k', ind=0, clim=1e-5, alpha=0.5, cmap='bwr', diverging=True,
+              azim=-3, elev=12, roll=8):
+#              azim=-26, elev=7, roll=0):
     '''
     Plot a slice of a quantity q through the provided 3D mesh 
 
@@ -762,9 +772,7 @@ def plotslice(ax, meshgrid, q, cut='k', ind=0, clim=1e-5, cmap='bwr', diverging=
     
     cmap = matplotlib.pyplot.get_cmap(name=cmap)
     ax.set_axis_off()
-#    ax.view_init(azim=-26, elev=7)
-    ax.view_init(azim=-3, elev=12, roll=8)
-
+    ax.view_init(azim=azim, elev=elev, roll=roll)
     # visualization.spherical_grid(ax, lat_ev, lon_ev, alt_ev, color='blue')
     # visualization.field_aligned_grid(ax, grid, alts_grid, color='green', dipoleB=dipolekw)
 
@@ -776,19 +784,19 @@ def plotslice(ax, meshgrid, q, cut='k', ind=0, clim=1e-5, cmap='bwr', diverging=
     x, y, z = coordinates.sph_to_car((RE+alt_ev.flatten(), 90-lat_ev.flatten(), lon_ev.flatten()), deg=True)
     if cut=='k':
         p = ax.plot_surface(x.reshape(shape)[ind,:,:], y.reshape(shape)[ind,:,:], 
-                            z.reshape(shape)[ind,:,:], alpha=0.5,
+                            z.reshape(shape)[ind,:,:], alpha=alpha,
                             facecolors=cmap(norm(q[ind,:,:])), linewidth=0.1, 
-                            rcount = np.max(shape), ccount = np.max(shape),cmap=cmap)
+                            rcount = np.max(shape), ccount = np.max(shape),cmap=cmap,clip_on=True)
     elif cut=='i':
         p = ax.plot_surface(x.reshape(shape)[:,ind,:], y.reshape(shape)[:,ind,:], 
-                            z.reshape(shape)[:,ind,:], alpha=0.5,
+                            z.reshape(shape)[:,ind,:], alpha=alpha,
                             facecolors=cmap(norm(q[:,ind,:])), linewidth=0.1, 
-                            rcount = np.max(shape[0:]), ccount = np.max(shape[0:]), cmap=cmap)
+                            rcount = np.max(shape[0:]), ccount = np.max(shape[0:]), cmap=cmap,clip_on=True)
     else:
         p = ax.plot_surface(x.reshape(shape)[:,:,ind], y.reshape(shape)[:,:,ind], 
-                            z.reshape(shape)[:,:,ind], alpha=0.5,
+                            z.reshape(shape)[:,:,ind], alpha=alpha,
                             facecolors=cmap(norm(q[:,:,ind])), linewidth=0.1, 
-                            rcount = np.max(shape), ccount = np.max(shape),cmap=cmap)    
+                            rcount = np.max(shape), ccount = np.max(shape),cmap=cmap,clip_on=True)    
 
     x0, y0, z0 = coordinates.sph_to_car((RE+0, 90-lat_ev[0,shape[1]//2,shape[2]//2], lon_ev[0,shape[1]//2,shape[2]//2]), deg=True)
 
@@ -796,5 +804,6 @@ def plotslice(ax, meshgrid, q, cut='k', ind=0, clim=1e-5, cmap='bwr', diverging=
     ax.set_xlim(x0[0]-range_, x0[0]+range_)
     ax.set_ylim(y0[0]-range_, y0[0]+range_)
     ax.set_zlim(z0[0], z0[0]+2*range_) 
+    # ax.set_zlim(z0[0], z0[0]+2.5*range_) 
 
     return ax            

@@ -24,6 +24,10 @@ try:
 except:
     import visualization
     import coordinates    
+
+import importlib
+importlib.reload(visualization)
+
 RE = 6371.2 # Earth radius in km
 
 
@@ -53,9 +57,11 @@ def compare_input_jperp(dat, jjj2, inside, savesuff, secs_grid, alts_grid,
         slices = dat.shape[dim]
     else:
         slices = [sliceindex]
-    clim = 20e-6
+    # clim = 20e-6 #A/m²
+    clim = 20 #μA/m²
     if param == 'jperpr':
-        txt = '$\\mathbf{j}_{\perp,r}$'
+        # txt = '$\\mathbf{j}_{\perp,r}$'
+        txt = '$j_{\perp,r}$'
         ppp1 = j_perp[0:N].reshape(dat.shape)
         ppp1[~inside.reshape(dat.shape)] = np.nan
         _ppp2 = jjj2[0,:]
@@ -63,7 +69,8 @@ def compare_input_jperp(dat, jjj2, inside, savesuff, secs_grid, alts_grid,
         ppp2[~inside.reshape(dat.shape)] = np.nan
         ppp2[inside.reshape(dat.shape)] = _ppp2
     elif param == 'jperptheta':
-        txt = '$\\mathbf{j}_{\perp,\\theta}$'
+        # txt = '$\\mathbf{j}_{\perp,\\theta}$'
+        txt = '$j_{\perp,\phi}$'
         ppp1 = j_perp[N:2*N].reshape(dat.shape)
         ppp1[~inside.reshape(dat.shape)] = np.nan
         _ppp2 = jjj2[1,:]
@@ -71,7 +78,8 @@ def compare_input_jperp(dat, jjj2, inside, savesuff, secs_grid, alts_grid,
         ppp2[~inside.reshape(dat.shape)] = np.nan
         ppp2[inside.reshape(dat.shape)] = _ppp2
     elif param == 'jperpphi':
-        txt = '$\\mathbf{j}_{\perp,\phi}$'
+        # txt = '$\\mathbf{j}_{\perp,\phi}$'
+        txt = '$j_{\perp,\phi}$'
         ppp1 = j_perp[2*N:3*N].reshape(dat.shape)
         ppp1[~inside.reshape(dat.shape)] = np.nan
         _ppp2 = jjj2[2,:]
@@ -82,6 +90,19 @@ def compare_input_jperp(dat, jjj2, inside, savesuff, secs_grid, alts_grid,
         # diffs = 100 * (ppp1[0:8,:,sliceindex] - ppp2[0:8,:,sliceindex])/(ppp1[0:8,:,sliceindex])
         # plt.hist(diffs.flatten(), range=(-100,100), bins=40)
     
+    # convert to μA/m²
+    ppp1 *= 1e6
+    ppp2 *= 1e6
+
+    if savesuff == '_Ohmslaw_':
+        showtext = "Ohm's law"
+    elif savesuff == '_vi-ve_':
+        showtext = r"$\mathbf{v}_i-\mathbf{v}_e$"
+    else:
+        print("valid savesuffs are ['_Ohmslaw_','_vi-ve_']!")
+        showtext = "something else"
+        print(f"Defaulting to showtext = {showtext}")
+
     for sliceindex in slices:
         fig = plt.figure(figsize = (30, 10))
         #GEMINI part to the left
@@ -98,8 +119,8 @@ def compare_input_jperp(dat, jjj2, inside, savesuff, secs_grid, alts_grid,
                                  dat.lon.reshape(dat.shape), 
                                  dat.alt.reshape(dat.shape), 
                                  ppp2, dim = dim, sliceindex = sliceindex, maph=maph, 
-                                 parameter=txt + ' estimated with '+savesuff[1:-1], 
-                                 clim=clim, dipole_lompe=geomag, coastlines=False)            
+                                 parameter=txt + ' estimated with '+showtext, 
+                                 clim=clim, dipole_lompe=geomag, coastlines=False, label_alt=True)
         #difference in right panel
         ax = fig.add_subplot(133, projection='3d')
         visualization.plot_slice(ax, secs_grid, alts_grid, dat.lat.reshape(dat.shape), 
@@ -107,18 +128,18 @@ def compare_input_jperp(dat, jjj2, inside, savesuff, secs_grid, alts_grid,
                                  dat.alt.reshape(dat.shape), 
                                  ppp1-ppp2, dim = dim, sliceindex = sliceindex, maph=maph,
                                  parameter='GEMINI - estimate', clim=clim, dipole_lompe=geomag,
-                                 coastlines=False)
+                                 coastlines=False, label_alt=True)
         #Colorbar
         cbarax = plt.axes((0.37,0.2,0.3,0.02))
         # cbarax = plt.subplot2grid((1,3), (0, 1), rowspan = 1, colspan = 1)
         cmap = plt.cm.bwr
-        norm = mpl.colors.Normalize(vmin=-clim*1e6, vmax=clim*1e6)
+        norm = mpl.colors.Normalize(vmin=-clim, vmax=clim)
         cb1 = mpl.colorbar.ColorbarBase(cbarax, cmap=cmap,
                                     norm=norm,
                                     orientation='horizontal')
         cb1.ax.tick_params(labelsize=16)
         cb1.ax.xaxis.get_offset_text().set_fontsize(16)
-        cb1.set_label('[$\mu$A/m$^2$]', fontsize=16)
+        cb1.set_label('[μA/m$^2$]', fontsize=16)
         # if pdf:
         #     savename = './comparison_'+param+'_dim='+str(dim)+savesuff+'%03i.pdf' % sliceindex
         # else:
@@ -222,8 +243,13 @@ def compare_potentials(dat, grid, alts_grid, datadict, inside, model, dipole_lom
     
     
 def plot_analysis_grid(datadict, grid, alts_grid, lat_ev, lon_ev, alt_ev, dipole_lompe=False, 
-                       data=True, eiscat=True, _d=400, boxgrid=False, q='fac', clim=2e-5, 
-                       cmap='bwr', diverging=True, ax=None, maxh=None):
+                       data=True, eiscat=True, _d=400, boxgrid=False, q='fac',
+                       qscalefactor=1,
+                       altlabelsize=14,
+                       clim=2e-5,                        
+                       cmap='bwr', diverging=True, ax=None, maxh=None,
+                       azim=-3, elev=12, roll=8):
+                       # azim=-26, elev=7, roll=0):
     '''
     Make a plot of the inversion grid and data selection grid, and possibly also some data
     to aid the tuning of the grids to be used
@@ -287,12 +313,11 @@ def plot_analysis_grid(datadict, grid, alts_grid, lat_ev, lon_ev, alt_ev, dipole
         fig = plt.figure(figsize = (10, 10))
         ax = fig.add_subplot(111, projection='3d')
     ax.set_axis_off()
-    ax.view_init(azim=-3, elev=12, roll=8) # changed during revision
-#    ax.view_init(azim=-26, elev=7)
-
+    ax.view_init(azim=azim, elev=elev, roll=roll)
     if boxgrid:
         visualization.spherical_grid(ax, lat_ev, lon_ev, alt_ev, color='blue', maph=datadict['maph'])
-    visualization.field_aligned_grid(ax, grid, alts_grid, color='green', dipoleB=dipole_lompe, coastlines=False)
+    visualization.field_aligned_grid(ax, grid, alts_grid, color='green', dipoleB=dipole_lompe, coastlines=False,
+                                     altlabelsize=altlabelsize)
     kwargs={'linewidth':3}
     # cmap = plt.cm.bwr
     # clim = 2e-5
@@ -314,7 +339,7 @@ def plot_analysis_grid(datadict, grid, alts_grid, lat_ev, lon_ev, alt_ev, dipole
             x = x[keep]
             y = y[keep]
             z = z[keep]
-            c = datadict[q][keep]
+            c = datadict[q][keep] * qscalefactor
             ax.scatter(x, y, z, c = c, cmap=cmap, norm=norm)
         else:
             
@@ -528,7 +553,7 @@ def reconsrtruction_performance(dat, grid, alts_grid, lat_ev, lon_ev, alt_ev, fu
             ax.view_init(azim=-26, elev=7)
             # visualization.spherical_grid(ax, lat_ev, lon_ev, alt_ev, color='blue')
             visualization.field_aligned_grid(ax, grid, alts_grid, color='green', dipoleB=dipolekw,
-                                             coastlines=False,**kwargs)
+                                             coastlines=False,label_alt=True,**kwargs)
             for kk in range(lat_ev[0,-1,:].size):
                 visualization.plot_field_line(ax, lat_ev[0,-1,kk], lon_ev[0,-1,kk], 
                                           alts_grid, color='orange', **kwargs, dipoleB=dipolekw)
@@ -588,7 +613,7 @@ def reconsrtruction_performance(dat, grid, alts_grid, lat_ev, lon_ev, alt_ev, fu
             ax.view_init(azim=-26, elev=7)
             # visualization.spherical_grid(ax, lat_ev, lon_ev, alt_ev, color='blue') #Data locations
             visualization.field_aligned_grid(ax, grid, alts_grid, color='green', dipoleB=dipolekw, 
-                                             coastlines=False, **kwargs) # Base SECS grid
+                                             coastlines=False,label_alt=True, **kwargs) # Base SECS grid
             # for kk in range(lat.reshape(shape)[0,-1,:].size): # Plot some field-lines
             #     visualization.plot_field_line(ax2, lat_ev.reshape(shape)[0,-1,kk], 
             #                 lon_ev.reshape(shape)[0,-1,kk], alt_ev.reshape(shape)[:,-1,0], 
@@ -660,7 +685,7 @@ def reconsrtruction_performance(dat, grid, alts_grid, lat_ev, lon_ev, alt_ev, fu
         cb1 = mpl.colorbar.ColorbarBase(cbarax, cmap=cmap,
                                     norm=norm,
                                     orientation='vertical')
-        cb1.set_label('[A/m$^2$]', fontsize=16)
+        cb1.set_label('[μA/m$^2$]', fontsize=16)
         cb1.ax.yaxis.set_label_coords(-1.3, 0.5)
             
         sss = ''
@@ -774,8 +799,8 @@ def scatterplot_reconstruction(grid, alts_grid, dat, lon, lat, alt, full_j, jpar
     ax.spines[['right', 'top']].set_visible(False)
     # lgnd.legendHandles[0]._legmarker.set_markersize(6)
     # lgnd.legendHandles[1]._legmarker.set_markersize(6)
-    ax.set_xlabel('GEMINI $[\mu A/m^2]$')
-    ax.set_ylabel('3D SECS $[\mu A/m^2]$')
+    ax.set_xlabel('GEMINI [μA/m$^2$]')
+    ax.set_ylabel('3D SECS [μA/m$^2$]')
     ax.set_ylim(-140,70)
     ax.set_xlim(-140,70)
     
@@ -788,7 +813,7 @@ def scatterplot_reconstruction(grid, alts_grid, dat, lon, lat, alt, full_j, jpar
     RMSE_fac = np.sqrt(np.mean((dat.fac[highalt]*1e6 - 1e6*jpar[highalt])**2))
     corr_fac = np.corrcoef(dat.fac[highalt], jpar[highalt])[0,1]
 
-    ax.text(15, -60, 'RMSE $[\mu A/m^2], r$', color='black', ha='left')   
+    ax.text(15, -60, 'RMSE [μA/m$^2$], $r$', color='black', ha='left')   
     ax.text(50, -75, '%4.1f,   %4.2f' % (RMSE_u, corr_u), color='C0', ha='right')
     ax.text(50, -90, '%4.1f,   %4.2f' % (RMSE_n, corr_n), color='C1', ha='right')
     ax.text(50, -105, '%4.1f,   %4.2f' % (RMSE_e, corr_e), color='C2', ha='right')
@@ -929,7 +954,12 @@ def snr_output_plot(covar_j, meshgrid, dat, grid, alts_grid, clim=2e-5,
                     cut='j', ind=5, transmitter=('ski_mod', 67.5, 23.7), 
                     receivers=[('ski_mod', 67.5, 23.7),
                      ('krs_mod', 66.55, 25.92), ('kai_mod', 66.48, 22.54)],
-                    climsnr=1):
+                    climsnr=1,
+                    qscalefactor=1e6,
+                    alpha=0.5,
+                    show_radar_locations=True,
+                    azim=-3, elev=12, roll=8):
+                    # azim=-26, elev=7, roll=0):
 
     datadict = dat.__dict__
 
@@ -976,6 +1006,14 @@ def snr_output_plot(covar_j, meshgrid, dat, grid, alts_grid, clim=2e-5,
     kwargs={'linewidth':1}
     plot_titles2 = ['$|j_{\phi, GEMINI}| / \\sigma_{j_{\phi}}$', '$|j_{\\theta, GEMINI}| / \\sigma_{j_{\\theta}}$', '$|j_{r, GEMINI}| / \\sigma_{j_{r}}$']
     
+    cmap = 'viridis'
+    cmap = 'plasma'
+    cmap = 'Reds'
+    # cmap = 'pink_r'
+    extend_noise = False
+    extend_snr = False
+
+    altlabelsize = 10
     for pp, ax in enumerate(axs):
         if pp == 0:
             pp2 = 2
@@ -983,37 +1021,74 @@ def snr_output_plot(covar_j, meshgrid, dat, grid, alts_grid, clim=2e-5,
             pp2 = 1
         elif pp ==2:
             pp2 = 0
-        noise = np.sqrt(np.diag(covar_j[pp2*N:(pp2+1)*N,pp2*N:(pp2+1)*N])).reshape(alt_ev.shape)
+        noise = np.sqrt(np.diag(covar_j[pp2*N:(pp2+1)*N,pp2*N:(pp2+1)*N])).reshape(alt_ev.shape)*qscalefactor
 
-        signal = datadict[plotparams[pp]].reshape(alt_ev.shape)
+        signal = datadict[plotparams[pp]].reshape(alt_ev.shape)*qscalefactor
+
+        if np.max(noise) > clim:
+            extend_noise = True
+
+        if np.max(np.abs(signal)/noise) > climsnr:
+            extend_snr = True
 
         # noise_cf = np.sqrt(np.diag(Cmpost[0:KIJ,:KIJ]).reshape((K,I,J)))
         # noise_df = np.sqrt(np.diag(Cmpost[1*KIJ:2*KIJ,1*KIJ:2*KIJ]).reshape((K,I,J)))
         ax2 = axs2[pp]
-        ax = visualization.field_aligned_grid(ax, grid, alts_grid, color='green', dipoleB=False, **kwargs, coastlines=False)
-        ax.set_title(plot_titles[pp], fontsize=16)
-        ax2 = visualization.field_aligned_grid(ax2, grid, alts_grid, color='green', dipoleB=False, **kwargs, coastlines=False)
-        ax2.set_title(plot_titles2[pp], fontsize=16)
+        ax = visualization.field_aligned_grid(ax, grid, alts_grid, color='green', dipoleB=False, **kwargs,
+                                              altlabelsize=altlabelsize,
+                                              coastlines=False,
+                                              max_alt=500.)
+        ax.set_title(plot_titles[pp], fontsize=16, zorder=100)
+        ax2 = visualization.field_aligned_grid(ax2, grid, alts_grid, color='green', dipoleB=False, **kwargs,
+                                               altlabelsize=altlabelsize,
+                                               coastlines=False, label_alt=True,
+                                               max_alt=500.)
+        ax2.set_title(plot_titles2[pp], fontsize=16, zorder=100)
         if pp==2:
+            # Jone original
+            # x_, y_, z_ = coordinates.sph_to_car((RE+0, 90-74, 37), deg=True)
+            # ax.text(x_[0], y_[0], z_[0], 'Uncertainty', fontsize=16)
+            # ax2.text(x_[0], y_[0], z_[0], 'SNR', fontsize=16)
+
+            # Mine
+            # ax.text2D(-0.04,0.57,'Uncertainty',fontsize=16,transform=ax.transAxes,clip_on=False,rotation=70.)
+            # ax2.text2D(-0.02,0.62,'SNR',fontsize=16,transform=ax2.transAxes,clip_on=False,rotation=70.)
+
+            # Jone update
             x_, y_, z_ = coordinates.sph_to_car((RE+0, 90-74, 30), deg=True)
-            ax.text(x_[0], y_[0], z_[0], 'Uncertainty', fontsize=16)
-            ax2.text(x_[0], y_[0], z_[0], 'SNR', fontsize=16)
+            ax.text(x_[0], y_[0], z_[0], 'Uncertainty', fontsize=16,zorder=10)
+            ax2.text(x_[0], y_[0], z_[0], 'SNR', fontsize=16,zorder=10)
+            
+
         if type(cut) == str:
-            ax = visualization.plotslice(ax,(alt_ev,lat_ev,lon_ev), noise, cut=cut, ind=ind, clim=clim)
+            ax = visualization.plotslice(ax,(alt_ev,lat_ev,lon_ev), noise, cut=cut, ind=ind, clim=clim,
+                                         alpha=alpha,
+                                         azim=azim, elev=elev, roll=roll,
+                                         diverging=False, cmap=cmap)
             ax2 = visualization.plotslice(ax2,(alt_ev,lat_ev,lon_ev), np.abs(signal)/noise, cut=cut, 
-                                     ind=ind, clim=5, diverging=False, cmap='viridis')  
+                                          ind=ind, clim=5,
+                                          alpha=alpha,
+                                          diverging=False, cmap=cmap,
+                                          azim=azim, elev=elev, roll=roll)  
         else:
             for ii, c in enumerate(cut):
-                ax = visualization.plotslice(ax,(alt_ev,lat_ev,lon_ev), noise, cut=c, ind=ind[ii], clim=clim)
+                ax = visualization.plotslice(ax,(alt_ev,lat_ev,lon_ev), noise, cut=c, ind=ind[ii], clim=clim,
+                                             alpha=alpha,
+                                             azim=azim, elev=elev, roll=roll,
+                                             diverging=False, cmap=cmap)
                 ax2 = visualization.plotslice(ax2,(alt_ev,lat_ev,lon_ev), np.abs(signal)/noise, cut=c, 
-                                         ind=ind[ii], clim=climsnr, diverging=False, cmap='viridis')
+                                              ind=ind[ii], clim=climsnr,
+                                              alpha=alpha,
+                                              diverging=False, cmap=cmap,
+                                              azim=azim, elev=elev, roll=roll)
                 # Plot the radar site locations
-                alts = np.ones(3)*0.01
-                glats = np.array([receivers[0][1], receivers[1][1], receivers[2][1]])
-                glons = np.array([receivers[0][2], receivers[1][2], receivers[2][2]])
-                x_, y_, z_ = coordinates.sph_to_car((RE+alts, 90-glats, glons), deg=True)
-                ax.scatter(x_, y_, z_, marker='*', c=['C0', 'C1', 'C2'])
-                ax2.scatter(x_, y_, z_, marker='*', c=['C0', 'C1', 'C2'])
+                if show_radar_locations:
+                    alts = np.ones(3)*0.01
+                    glats = np.array([receivers[0][1], receivers[1][1], receivers[2][1]])
+                    glons = np.array([receivers[0][2], receivers[1][2], receivers[2][2]])
+                    x_, y_, z_ = coordinates.sph_to_car((RE+alts, 90-glats, glons), deg=True)
+                    ax.scatter(x_, y_, z_, marker='*', c=['C0', 'C1', 'C2'])
+                    ax2.scatter(x_, y_, z_, marker='*', c=['C0', 'C1', 'C2'])
                 # Print height of hor cuts
                 # if (c=='k') & (pp==2):
                 #     alt = int(alt_ev[ind[ii],0,0])
@@ -1023,27 +1098,34 @@ def snr_output_plot(covar_j, meshgrid, dat, grid, alts_grid, clim=2e-5,
                 #     ax2.text(x_[0], y_[0], z_[0], str(alt)+' km', fontsize=10)
                     
                 
-    # Colorbar SNR
-    cbarax = plt.subplot2grid((20,32), (10, 31), rowspan = 8, colspan = 1)
-    cmap = plt.cm.viridis
-    import matplotlib as mpl
-    norm = mpl.colors.Normalize(vmin=0, vmax=climsnr)
-    cb1 = mpl.colorbar.ColorbarBase(cbarax, cmap=cmap,
-                                norm=norm,
-                                orientation='vertical')
-    cb1.set_label('[SNR]', fontsize=16)
-    cb1.ax.yaxis.set_label_coords(-1.3, 0.5)                
-    
     # Colorbar error
     cbarax = plt.subplot2grid((20,32), (0, 31), rowspan = 8, colspan = 1)
-    cmap = plt.cm.bwr
+    # cmap = plt.cm.bwr
+    # cmap = plt.cm.viridis
     import matplotlib as mpl
-    norm = mpl.colors.Normalize(vmin=-clim*1e6, vmax=clim*1e6)
+    norm = mpl.colors.Normalize(vmin=0, vmax=clim)
+    if extend_noise:
+        extend_noise = 'max'
     cb2 = mpl.colorbar.ColorbarBase(cbarax, cmap=cmap,
-                                norm=norm,
-                                orientation='vertical')
-    cb2.set_label('[$\mu$A/m$^2$]', fontsize=16)
+                                    norm=norm,
+                                    orientation='vertical',
+                                    extend=extend_noise)
+    cb2.set_label('[μA/m$^2$]', fontsize=16)
     cb2.ax.yaxis.set_label_coords(-1.3, 0.5)                
+    
+    # Colorbar SNR
+    cbarax = plt.subplot2grid((20,32), (10, 31), rowspan = 8, colspan = 1)
+    # cmap = plt.cm.viridis
+    import matplotlib as mpl
+    norm = mpl.colors.Normalize(vmin=0, vmax=climsnr)
+    if extend_snr:
+        extend_snr = 'max'
+    cb1 = mpl.colorbar.ColorbarBase(cbarax, cmap=cmap,
+                                    norm=norm,
+                                    orientation='vertical',
+                                    extend=extend_snr)
+    cb1.set_label('[SNR]', fontsize=16)
+    cb1.ax.yaxis.set_label_coords(-1.3, 0.5)                
     
     return fig
     
@@ -1051,9 +1133,14 @@ def snr_output_plot(covar_j, meshgrid, dat, grid, alts_grid, clim=2e-5,
     
 
 def performance_plot(reconstructed_j, meshgrid, dat, grid, alts_grid, clim=2e-5, 
-                    cut='j', ind=5, transmitter=('ski_mod', 67.5, 23.7), 
-                    receivers=[('ski_mod', 67.5, 23.7),
-                     ('krs_mod', 66.55, 25.92), ('kai_mod', 66.48, 22.54)]):
+                     qscalefactor=1,
+                     cut='j', ind=5, transmitter=('ski_mod', 67.5, 23.7), 
+                     receivers=[('ski_mod', 67.5, 23.7),
+                                ('krs_mod', 66.55, 25.92), ('kai_mod', 66.48, 22.54)],
+                     max_alt=400.,
+                     show_radar_locations=True,
+                     azim=-3, elev=12, roll=8):
+                     # azim=-26, elev=7, roll=0):
 
     # Function that make a plot of reconstructed j and compare with ground truth
     # from GEMINI. This function is on the same form as the SNR plot function above
@@ -1091,19 +1178,20 @@ def performance_plot(reconstructed_j, meshgrid, dat, grid, alts_grid, clim=2e-5,
     fig = plt.figure(figsize=(15,10))
     
     # Top row showing 3D reconstruction uncertainties. Bottom row show SNR
-    ax3 = plt.subplot2grid((20, 32), (0, 0), rowspan = 10, colspan = 10, projection='3d')
-    ax2 = plt.subplot2grid((20, 32), (0, 10), rowspan = 10, colspan = 10, projection='3d')
-    ax1 = plt.subplot2grid((20, 32), (0, 20), rowspan = 10, colspan = 10, projection='3d')
+    ax3 = plt.subplot2grid((21, 32), (1, 0), rowspan = 10, colspan = 10, projection='3d')
+    ax2 = plt.subplot2grid((21, 32), (1, 10), rowspan = 10, colspan = 10, projection='3d')
+    ax1 = plt.subplot2grid((21, 32), (1, 20), rowspan = 10, colspan = 10, projection='3d')
     axs = [ax1,ax2,ax3]
-    ax6 = plt.subplot2grid((20, 32), (10, 0), rowspan = 10, colspan = 10, projection='3d')
-    ax5 = plt.subplot2grid((20, 32), (10, 10), rowspan = 10, colspan = 10, projection='3d')
-    ax4 = plt.subplot2grid((20, 32), (10, 20), rowspan = 10, colspan = 10, projection='3d')
+    ax6 = plt.subplot2grid((21, 32), (11, 0), rowspan = 10, colspan = 10, projection='3d')
+    ax5 = plt.subplot2grid((21, 32), (11, 10), rowspan = 10, colspan = 10, projection='3d')
+    ax4 = plt.subplot2grid((21, 32), (11, 20), rowspan = 10, colspan = 10, projection='3d')
     axs2 = [ax4,ax5,ax6] 
     plotparams = ['je', 'jn','ju']
     plot_titles2 = ['$j_{\phi}$', '$j_{\\theta}$', '$j_{r}$']
     kwargs={'linewidth':1}
     plot_titles = ['$j_{\phi}$', '$j_{\\theta}$', '$j_{r}$']
     
+    altlabelsize=10
     for pp, ax in enumerate(axs):
         if pp == 0:
             pp2 = 2
@@ -1111,36 +1199,60 @@ def performance_plot(reconstructed_j, meshgrid, dat, grid, alts_grid, clim=2e-5,
             pp2 = 1
         elif pp ==2:
             pp2 = 0
-        _j = reconstructed_j[pp2*N:(pp2+1)*N].reshape(alt_ev.shape)
-        signal = datadict[plotparams[pp]].reshape(alt_ev.shape)
+        _j = reconstructed_j[pp2*N:(pp2+1)*N].reshape(alt_ev.shape)*qscalefactor
+        signal = datadict[plotparams[pp]].reshape(alt_ev.shape)*qscalefactor
         if pp == 1:
             signal = -signal
 
         # noise_cf = np.sqrt(np.diag(Cmpost[0:KIJ,:KIJ]).reshape((K,I,J)))
         # noise_df = np.sqrt(np.diag(Cmpost[1*KIJ:2*KIJ,1*KIJ:2*KIJ]).reshape((K,I,J)))
         ax2 = axs2[pp]
-        ax = visualization.field_aligned_grid(ax, grid, alts_grid, color='green', dipoleB=False, **kwargs, coastlines=False)
-        ax.set_title(plot_titles[pp], fontsize=16)
-        ax2 = visualization.field_aligned_grid(ax2, grid, alts_grid, color='green', dipoleB=False, **kwargs, coastlines=False)
-        ax2.set_title(plot_titles2[pp], fontsize=16)
+        ax = visualization.field_aligned_grid(ax, grid, alts_grid, color='green', dipoleB=False, **kwargs,
+                                              coastlines=False,
+                                              altlabelsize=altlabelsize,
+                                              max_alt=max_alt)
+        ax.set_title(plot_titles[pp], fontsize=16, zorder=100)
+        ax2 = visualization.field_aligned_grid(ax2, grid, alts_grid, color='green', dipoleB=False, **kwargs, coastlines=False,
+                                               label_alt=True,
+                                               altlabelsize=altlabelsize,
+                                               max_alt=max_alt)
+        ax2.set_title(plot_titles2[pp], fontsize=16, zorder=100)
         if pp==2:
+
+            # Jone original
+            # x_, y_, z_ = coordinates.sph_to_car((RE+0, 90-74, 37), deg=True)
+            # ax.text(x_[0], y_[0], z_[0], 'GEMINI', fontsize=16, zorder=10)
+            # ax2.text(x_[0], y_[0], z_[0], '3D reconstruction', fontsize=16, zorder=10)
+
+            # What I had before
+            # ax.text2D(-0.02,0.62,'GEMINI',fontsize=16,transform=ax.transAxes,clip_on=False,rotation=70.)
+            # ax2.text2D(-0.05,0.55,'3D reconstruction',fontsize=16,transform=ax2.transAxes,clip_on=False,rotation=70.)
+
+            # Jone update
             x_, y_, z_ = coordinates.sph_to_car((RE+0, 90-74, 30), deg=True)
             ax.text(x_[0], y_[0], z_[0], 'GEMINI', fontsize=16, zorder=10)
             ax2.text(x_[0], y_[0], z_[0], '3D reconstruction', fontsize=16, zorder=10)
+
+
         if type(cut) == str:
-            ax = visualization.plotslice(ax,(alt_ev,lat_ev,lon_ev), signal, cut=cut, ind=ind, clim=clim)
-            ax2 = visualization.plotslice(ax2,(alt_ev,lat_ev,lon_ev), _j, cut=cut, clim=clim) 
+            ax = visualization.plotslice(ax,(alt_ev,lat_ev,lon_ev), signal, cut=cut, ind=ind, clim=clim,
+                                         azim=azim, elev=elev, roll=roll)
+            ax2 = visualization.plotslice(ax2,(alt_ev,lat_ev,lon_ev), _j, cut=cut, clim=clim,
+                                          azim=azim, elev=elev, roll=roll) 
         else:
             for ii, c in enumerate(cut):
-                ax = visualization.plotslice(ax,(alt_ev,lat_ev,lon_ev), signal, cut=c, ind=ind[ii], clim=clim)
-                ax2 = visualization.plotslice(ax2,(alt_ev,lat_ev,lon_ev), _j, cut=c, ind=ind[ii], clim=clim)
+                ax = visualization.plotslice(ax,(alt_ev,lat_ev,lon_ev), signal, cut=c, ind=ind[ii], clim=clim,
+                                             azim=azim, elev=elev, roll=roll)
+                ax2 = visualization.plotslice(ax2,(alt_ev,lat_ev,lon_ev), _j, cut=c, ind=ind[ii], clim=clim,
+                                              azim=azim, elev=elev, roll=roll)
                 # Plot the radar site locations
-                alts = np.ones(3)*0.01
-                glats = np.array([receivers[0][1], receivers[1][1], receivers[2][1]])
-                glons = np.array([receivers[0][2], receivers[1][2], receivers[2][2]])
-                x_, y_, z_ = coordinates.sph_to_car((RE+alts, 90-glats, glons), deg=True)
-                ax.scatter(x_, y_, z_, marker='*', c=['C0', 'C1', 'C2'])
-                ax2.scatter(x_, y_, z_, marker='*', c=['C0', 'C1', 'C2'])
+                if show_radar_locations:
+                    alts = np.ones(3)*0.01
+                    glats = np.array([receivers[0][1], receivers[1][1], receivers[2][1]])
+                    glons = np.array([receivers[0][2], receivers[1][2], receivers[2][2]])
+                    x_, y_, z_ = coordinates.sph_to_car((RE+alts, 90-glats, glons), deg=True)
+                    ax.scatter(x_, y_, z_, marker='*', c=['C0', 'C1', 'C2'])
+                    ax2.scatter(x_, y_, z_, marker='*', c=['C0', 'C1', 'C2'])
                 # Print alatitude of hor cuts
                 # if (c=='k') & (pp==2):
                 #     alt = int(alt_ev[ind[ii],0,0])
@@ -1157,18 +1269,22 @@ def performance_plot(reconstructed_j, meshgrid, dat, grid, alts_grid, clim=2e-5,
     cb1 = mpl.colorbar.ColorbarBase(cbarax, cmap=cmap,
                                 norm=norm,
                                 orientation='vertical')
-    cb1.set_label('[$\mu$A/m$^2$]', fontsize=16)
+    cb1.set_label('[μA/m$^2$]', fontsize=16)
     cb1.ax.yaxis.set_label_coords(-1.3, 0.5)            
     
     return fig
 
 
 def output_plot(reconstructed_p, meshgrid, dat, grid, alts_grid, clim=2e-5, 
-                    cut='j', ind=5, transmitter=('ski_mod', 67.5, 23.7), 
-                    receivers=[('ski_mod', 67.5, 23.7),
-                     ('krs_mod', 66.55, 25.92), ('kai_mod', 66.48, 22.54)],
-                    plot_titles = ['$j_{\phi}$', '$j_{\\theta}$', '$j_{r}$'],
-                    unit='[m/s]'):
+                cut='j', ind=5, transmitter=('ski_mod', 67.5, 23.7), 
+                receivers=[('ski_mod', 67.5, 23.7),
+                           ('krs_mod', 66.55, 25.92), ('kai_mod', 66.48, 22.54)],
+                plot_titles = ['$j_{\phi}$', '$j_{\\theta}$', '$j_{r}$'],
+                unit='[m/s]',
+                show_radar_locations=True,
+                azim=-3, elev=12, roll=8,
+                # azim=-26, elev=7, roll=0,
+                ):
 
     # Function that make a plot of reconstructed j and compare with ground truth
     # from GEMINI. This function is on the same form as the SNR plot function above
@@ -1212,6 +1328,7 @@ def output_plot(reconstructed_p, meshgrid, dat, grid, alts_grid, clim=2e-5,
     axs = [ax1,ax2,ax3]
     kwargs={'linewidth':1}
     
+    altlabelsize = 10
     for pp, ax in enumerate(axs):
         if pp == 0:
             pp2 = 2
@@ -1224,22 +1341,36 @@ def output_plot(reconstructed_p, meshgrid, dat, grid, alts_grid, clim=2e-5,
 
         # noise_cf = np.sqrt(np.diag(Cmpost[0:KIJ,:KIJ]).reshape((K,I,J)))
         # noise_df = np.sqrt(np.diag(Cmpost[1*KIJ:2*KIJ,1*KIJ:2*KIJ]).reshape((K,I,J)))
-        ax = visualization.field_aligned_grid(ax, grid, alts_grid, color='green', dipoleB=False, **kwargs, coastlines=False)
+        ax = visualization.field_aligned_grid(ax, grid, alts_grid, color='green', dipoleB=False, **kwargs,
+                                              coastlines=False,altlabelsize=altlabelsize)
         ax.set_title(plot_titles[pp], fontsize=16)
         if pp==2:
+            # Jone original
+            # x_, y_, z_ = coordinates.sph_to_car((RE+0, 90-74, 37), deg=True)
+            # ax.text(x_[0], y_[0], z_[0], '3D reconstruction', fontsize=16, zorder=10)
+
+            # Mine
+            # ax.text2D(-0.05,0.55,'3D reconstruction',fontsize=16,transform=ax.transAxes,clip_on=False,rotation=70.)
+
+            # Jone update
             x_, y_, z_ = coordinates.sph_to_car((RE+0, 90-74, 30), deg=True)
             ax.text(x_[0], y_[0], z_[0], '3D reconstruction', fontsize=16, zorder=10)
+            
+
         if type(cut) == str:
-            ax = visualization.plotslice(ax,(alt_ev,lat_ev,lon_ev), _j, cut=cut, clim=clim) 
+            ax = visualization.plotslice(ax,(alt_ev,lat_ev,lon_ev), _j, cut=cut, clim=clim,
+                                         azim=azim, elev=elev, roll=roll) 
         else:
             for ii, c in enumerate(cut):
-                ax = visualization.plotslice(ax,(alt_ev,lat_ev,lon_ev), _j, cut=c, ind=ind[ii], clim=clim)
+                ax = visualization.plotslice(ax,(alt_ev,lat_ev,lon_ev), _j, cut=c, ind=ind[ii], clim=clim,
+                                             azim=azim, elev=elev, roll=roll)
                 # Plot the radar site locations
-                alts = np.ones(3)*0.01
-                glats = np.array([receivers[0][1], receivers[1][1], receivers[2][1]])
-                glons = np.array([receivers[0][2], receivers[1][2], receivers[2][2]])
-                x_, y_, z_ = coordinates.sph_to_car((RE+alts, 90-glats, glons), deg=True)
-                ax.scatter(x_, y_, z_, marker='*', c=['C0', 'C1', 'C2'])
+                if show_radar_locations:
+                    alts = np.ones(3)*0.01
+                    glats = np.array([receivers[0][1], receivers[1][1], receivers[2][1]])
+                    glons = np.array([receivers[0][2], receivers[1][2], receivers[2][2]])
+                    x_, y_, z_ = coordinates.sph_to_car((RE+alts, 90-glats, glons), deg=True)
+                    ax.scatter(x_, y_, z_, marker='*', c=['C0', 'C1', 'C2'])
                 # Print alatitude of hor cuts
                 # if (c=='k') & (pp==2):
                 #     alt = int(alt_ev[ind[ii],0,0])
